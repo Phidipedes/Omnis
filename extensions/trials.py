@@ -17,7 +17,7 @@ class trials(commands.Cog, name = "Trial Members"):
         self.bot = bot
 
     @commands.group(aliases = ["trial", "t"])
-    @commands.has_any_role([738915444420903022, 716599787780177954])
+    @commands.has_any_role(738915444420903022, 716599787780177954)
     async def trials(self, ctx):
 
         if ctx.invoked_subcommand == None:
