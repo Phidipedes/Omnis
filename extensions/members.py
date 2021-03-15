@@ -46,13 +46,13 @@ class members(commands.Cog, name = "Member Updates"):
 
                 if cachedUsername!= currentUsername:
 
-                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"trialMembers.{member['uuid']}.username": currentUsername}})
+                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.username": currentUsername}})
                     memberUsernameChangeEmbed = discord.Embed(title = f"Member Username Changed", description = f"UUID:{member['uuid']}\n{cachedUsername} **-->** {currentUsername}\nRank: {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberUsernameChangeEmbed)
 
                 if cachedRank != currentRank:
 
-                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"trialMembers.{member['uuid']}.rank": currentRank}})
+                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.rank": currentRank}})
                     memberRankChangeEmbed = discord.Embed(title = f"Member Rank Changed", description = f"UUID: {member['uuid']}\nUsername:{currentUsername}\n{cachedRank} **-->** {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberRankChangeEmbed)
 
