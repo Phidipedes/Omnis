@@ -36,7 +36,7 @@ class members(commands.Cog, name = "Member Updates"):
 
                 memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
 
-                memberJoinEmbed = discord.Embed(title = f"Member Joined", description = f"IGN: {currentUsername}\nJoined at:{member['joined']}", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+                memberJoinEmbed = discord.Embed(title = f"Member Joined", description = f"UUID: {member['uuid']}\nIGN: {currentUsername}\nJoined at:{member['joined']}", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
                 await memberLogChannel.send(embed = memberJoinEmbed)
 
             else:
