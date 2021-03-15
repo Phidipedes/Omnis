@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 import typing
-
+import pytz
 import asyncio
 import datetime
 
@@ -22,7 +22,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         if ctx.invoked_subcommand == None:
 
-            trialUsageEmbed = discord.Embed(title = f".trial usage", description = f".trial [add | remove | list | check | requirements | duration]\nadd - add a member to the trial list\nremove - remove a member from the trial list\nlist - list the current trial members\ncheck - check the staus of today's trial members\nrequirements - chnage the gexp requirement to pass trial\nduration - change the duration of the trial period", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+            trialUsageEmbed = discord.Embed(title = f"trial command usage", description = f"trial [add | remove | list | check | requirements | duration]\nadd - add a member to the trial list\nremove - remove a member from the trial list\nlist - list the current trial members\ncheck - check the staus of today's trial members\nrequirements - chnage the gexp requirement to pass trial\nduration - change the duration of the trial period", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
             await ctx.channel.send(embed = trialUsageEmbed)
 
     @trials.command(aliases = ["requirement", "reqs", "req"])
@@ -67,27 +67,41 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trials:
 
-            trialGexp = (await memberCollection.find_one({"_id": "envision"}))["members"][trial]["gexp"]["total"]
+            if trial["memberDate"].date() == datetime.date.today().replace(tzinfo = pytz.timezone("US/Eastern")):
 
-            if trialGexp >= trialInfo["trialReq"]:
+                trialGexp = (await memberCollection.find_one({"_id": "envision"}))["members"][trial]["gexp"]["total"]
 
-                passList.append([trial, trialGexp])
+                if trialGexp >= trialInfo["trialReq"]:
 
-            else:
+                    passList.append([trial, trialGexp])
 
-                failList.append([trial, trialInfo["trialReq"] - trialGexp])
+                else:
+
+                    failList.append([trial, trialInfo["trialReq"] - trialGexp])
 
         passingMessage = ""
 
-        for passing in passList:
+        if len(passList) > 0:
 
-            passingMessage += f"```+{passing[0]} --- earned {passing[1]} gexp```\n"
+            for passing in passList:
+
+                passingMessage += f"```+{passing[0]} --- earned {passing[1]} gexp```\n"
+
+        else:
+            
+            passingMessage = "```No passing trials```"
 
         failingMessage = ""
 
-        for failing in failList:
+        if len(failList) > 0:
 
-            failingMessage += f"```+{failing[0]} --- missing {failing[1]} gexp```\n"
+            for failing in failList:
+
+                failingMessage += f"```+{failing[0]} --- missing {failing[1]} gexp```\n"
+
+        else:
+            
+            passingMessage = "```No passing trials```"
 
         passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.date.today()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
         failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.date.today()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
@@ -103,13 +117,15 @@ class trials(commands.Cog, name = "Trial Members"):
             await ctx.channel.send(f"What member do you want to log as trial member?")
             username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content
 
-        if username.casefold() not in (await memberCollection.find_one({"_id": "envision"}))["members"].keys():
+        if username.casefold() not in [member["username"] for member in (await memberCollection.find_one({"_id": "envision"}))["members"]]:
 
             await ctx.channel.send(f"That user is not in the guild. Make sure you spelled the name correctly! If you are sure you spelled the name correctly and that the member *is* in the guild, wait a few minutes and try again. The cache updates every minute with new members.")
 
         else:
 
-            trialsCollection.update_one({"_id": ctx.guild.id}, {"$set": {f"trialMembers.{username.casefold()}": datetime.datetime.utcnow() + datetime.timedelta(7)}})
+            trialsCollection.update_one({"_id": ctx.guild.id}, {"$set": {f"trialMembers.{username.casefold()}": datetime.date.today().replace(tzinfo = pytz.timezone("US/Eastern")) + datetime.timedelta(trialsCollection["trialDuration"])}})
+
+            await ctx.channel.send(f"Added trial member {username.casefold()} on {datetime.date.today().replace(tzinfo = pytz.timezone('US/Eastern'))}. (Member on {datetime.date.today().replace(tzinfo = pytz.timezone('US/Eastern')) + datetime.timedelta(trialsCollection['trialDuration'])})")
 
     @trials.error
     async def trials_error(self, ctx, error):
