@@ -34,7 +34,7 @@ class members(commands.Cog, name = "Member Updates"):
 
             if member["uuid"] not in cachedData["members"].keys():
 
-                memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
+                await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
 
                 memberJoinEmbed = discord.Embed(title = f"Member Joined", description = f"UUID: {member['uuid']}\nIGN: {currentUsername}\nJoined at:{member['joined']}", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
                 await memberLogChannel.send(embed = memberJoinEmbed)
@@ -46,13 +46,13 @@ class members(commands.Cog, name = "Member Updates"):
 
                 if cachedUsername!= currentUsername:
 
-                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.username": currentUsername}})
+                    await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.username": currentUsername}})
                     memberUsernameChangeEmbed = discord.Embed(title = f"Member Username Changed", description = f"UUID:{member['uuid']}\n{cachedUsername} **-->** {currentUsername}\nRank: {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberUsernameChangeEmbed)
 
                 if cachedRank != currentRank:
 
-                    memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.rank": currentRank}})
+                    await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.rank": currentRank}})
                     memberRankChangeEmbed = discord.Embed(title = f"Member Rank Changed", description = f"UUID: {member['uuid']}\nUsername:{currentUsername}\n{cachedRank} **-->** {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberRankChangeEmbed)
 
@@ -73,7 +73,7 @@ class members(commands.Cog, name = "Member Updates"):
 
         if len(uuidsLeft) > 0:
 
-            memberCollection.update_one({"_id": "envision"}, {"$set": {"members": cachedData["members"]}})
+            await memberCollection.update_one({"_id": "envision"}, {"$set": {"members": cachedData["members"]}})
 
     @updateMembers.before_loop
     async def beforeUpdateMembers(self):
