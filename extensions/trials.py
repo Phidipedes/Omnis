@@ -95,7 +95,7 @@ class trials(commands.Cog, name = "Trial Members"):
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
 
-    @trials.command(aliases = ["add", "a"])
+    @trials.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str] = None):
 
         if username == None:
