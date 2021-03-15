@@ -57,6 +57,28 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await ctx.channel.send(f"Gexp requirement amount needs to be an integer.")
 
+    @trials.command(aliases = ["dura", "dur"])
+    async def duration(self, ctx, duration: typing.Optional[int] = None):
+
+        try:
+
+            if duration == None:
+
+                await ctx.channel.send(f"How many days long do you want the trial period to be?")
+                duration = int((await ctx.channel.wait_for("message", timeout = 300, check = messageCheck(ctx))).content)
+
+            await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
+
+            await ctx.channel.send(f"Trial period duration set to {duration} days.")
+
+        except asyncio.TimeoutError:
+
+            await ctx.channel.send(f"Timed out")
+
+        except ValueError:
+
+            await ctx.channel.send(f"You must give an integer number of days.")
+
     @trials.command(aliases = ["ch", "c"])
     async def check(self, ctx):
 
@@ -149,7 +171,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await ctx.channel.send(f"Timed out.")
 
-    @trials.command(aliases = ["r"])
+    @trials.command(aliases = ["rem", "r"])
     async def remove(self, ctx, username: typing.Optional[str] = None):
 
         try:
@@ -169,15 +191,35 @@ class trials(commands.Cog, name = "Trial Members"):
 
                 pprint.pprint(updatedTrials)
 
-                res = await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
-
-                print(res.modified_count)
+                await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
 
                 await ctx.channel.send(f"Removed {username.casefold()} from the trial members list.")
 
         except asyncio.TimeoutError:
 
             await ctx.channel.send(f"Timed out")
+
+    @trials.command(aliases = ["list", "li"])
+    async def _list(self, ctx):
+
+        eastern = pytz.timezone("US/Eastern")
+
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+
+        membersMessage = f"Username ~-~-~ Member Date"
+
+        if len(trialData["trialMembers"]) > 0:
+
+            for trial in trialData["trialMembers"]:
+
+                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date()}```"
+
+        else:
+
+            membersMessage = "```+ No Trial Members```"
+
+        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {eastern.localize(datetime.datetime.utcnow()).date()}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+        await ctx.channel.send(embed = trialMemberListEmbed)
 
     @trials.error
     async def trials_error(self, ctx, error):
