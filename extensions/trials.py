@@ -101,7 +101,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         else:
             
-            passingMessage = "```No passing trials```"
+            failingMessage = "```No failing trials```"
 
         passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.date.today()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
         failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.date.today()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
