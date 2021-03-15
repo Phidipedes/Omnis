@@ -6,6 +6,8 @@ import pytz
 import asyncio
 import datetime
 
+import pprint
+
 from checks import messageCheck #pylint: disable=import-error
 
 from database import trialsCollection, memberCollection #pylint: disable=import-error
@@ -58,26 +60,32 @@ class trials(commands.Cog, name = "Trial Members"):
     @trials.command(aliases = ["ch", "c"])
     async def check(self, ctx):
 
+        eastern = pytz.timezone("US/Eastern")
+
         passList = []
         failList = []
 
-        trialInfo = (await trialsCollection.find_one({"_id": "envision"}))
+        trialData = await trialsCollection.find_one({"_id": "envision"})
         
-        trials = trialInfo["trialMembers"]
+        trialMembers = trialData["trialMembers"]
 
-        for trial in trials:
+        for trial in trialMembers:
 
-            if trial["memberDate"].date() == datetime.date.today().replace(tzinfo = pytz.timezone("US/Eastern")):
+            if trial["memberDate"].date() == eastern.localize(datetime.datetime.utcnow()).date():
 
-                trialGexp = (await memberCollection.find_one({"_id": "envision"}))["members"][trial]["gexp"]["total"]
+                for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
 
-                if trialGexp >= trialInfo["trialReq"]:
+                    if member["username"] == trial["username"]:
 
-                    passList.append([trial, trialGexp])
+                        gexpEarned = member["gexp"]["total"]
+
+                if gexpEarned >= trialData["trialReq"]:
+
+                    passList.append([trial["username"], gexpEarned])
 
                 else:
 
-                    failList.append([trial, trialInfo["trialReq"] - trialGexp])
+                    failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
 
         passingMessage = ""
 
@@ -112,20 +120,64 @@ class trials(commands.Cog, name = "Trial Members"):
     @trials.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str] = None):
 
-        if username == None:
+        try:
 
-            await ctx.channel.send(f"What member do you want to log as trial member?")
-            username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content
+            eastern = pytz.timezone("US/Eastern")
 
-        if username.casefold() not in [member["username"] for member in (await memberCollection.find_one({"_id": "envision"}))["members"]]:
+            trialDuration = (await trialsCollection.find_one({"_id": "envision"}))["trialDuration"]
 
-            await ctx.channel.send(f"That user is not in the guild. Make sure you spelled the name correctly! If you are sure you spelled the name correctly and that the member *is* in the guild, wait a few minutes and try again. The cache updates every minute with new members.")
+            if username == None:
 
-        else:
+                await ctx.channel.send(f"What member do you want to log as trial member?")
+                username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content
 
-            trialsCollection.update_one({"_id": ctx.guild.id}, {"$set": {f"trialMembers.{username.casefold()}": datetime.date.today().replace(tzinfo = pytz.timezone("US/Eastern")) + datetime.timedelta(trialsCollection["trialDuration"])}})
+            if username.casefold() not in [member["username"] for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values()]:
 
-            await ctx.channel.send(f"Added trial member {username.casefold()} on {datetime.date.today().replace(tzinfo = pytz.timezone('US/Eastern'))}. (Member on {datetime.date.today().replace(tzinfo = pytz.timezone('US/Eastern')) + datetime.timedelta(trialsCollection['trialDuration'])})")
+                await ctx.channel.send(f"That user is not in the guild. Make sure you spelled the name correctly! If you are sure you spelled the name correctly and that the member *is* in the guild, wait a few minutes and try again. The cache updates every minute with new members.")
+
+            elif username.casefold() in [trial["username"] for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"]]:
+
+                await ctx.channel.send(f"This member is already in their trial period.")
+
+            else:
+
+                trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username.casefold(), "memberDate": eastern.localize(datetime.datetime.utcnow()) + datetime.timedelta(trialDuration)}}})
+
+                await ctx.channel.send(f"Member {username.casefold()} starting trial on {eastern.localize(datetime.datetime.utcnow()).date()}. (Member on {eastern.localize(datetime.datetime.utcnow()).date() + datetime.timedelta(trialDuration)})")
+
+        except asyncio.TimeoutError:
+
+            await ctx.channel.send(f"Timed out.")
+
+    @trials.command(aliases = ["r"])
+    async def remove(self, ctx, username: typing.Optional[str] = None):
+
+        try:
+        
+            if username == None:
+
+                await ctx.channel.send(f"What member do you want to remove from the trial list?")
+                username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content.casefold()
+
+            if username.casefold() not in [trial["username"] for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"]]:
+
+                await ctx.channel.send(f"That user is not in the trial member list. Make sure you spelled the name correctly!")
+
+            else:
+
+                updatedTrials = [trial for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"] if not trial["username"] == username.casefold()]
+
+                pprint.pprint(updatedTrials)
+
+                res = await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
+
+                print(res.modified_count)
+
+                await ctx.channel.send(f"Removed {username.casefold()} from the trial members list.")
+
+        except asyncio.TimeoutError:
+
+            await ctx.channel.send(f"Timed out")
 
     @trials.error
     async def trials_error(self, ctx, error):
