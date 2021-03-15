@@ -7,7 +7,7 @@ from checks import messageCheck #pylint: disable=import-error
 
 class administration(commands.Cog, name = f"Administration"):
 
-    async def __init__(self, bot):
+    def __init__(self, bot):
 
         self.bot = bot
 
