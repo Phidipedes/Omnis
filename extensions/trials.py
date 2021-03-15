@@ -111,6 +111,13 @@ class trials(commands.Cog, name = "Trial Members"):
 
             trialsCollection.update_one({"_id": ctx.guild.id}, {"$set": {f"trialMembers.{username.casefold()}": datetime.datetime.utcnow() + datetime.timedelta(7)}})
 
+    @commands.errors
+    async def trials_error(self, ctx, error):
+
+        if isinstance(error, commands.MissingAnyRole):
+
+            await ctx.channel.send(f"You are missing a required role to use this command!")
+
 def setup(bot):
 
     bot.add_cog(trials(bot))
