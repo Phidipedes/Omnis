@@ -10,7 +10,7 @@ dotenv.load_dotenv()
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix = ".", intents = intents, case_insensitive = True)
+bot = commands.Bot(command_prefix = "o!", intents = intents, case_insensitive = True)
 
 @bot.event
 async def on_ready():
