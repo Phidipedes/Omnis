@@ -111,7 +111,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             trialsCollection.update_one({"_id": ctx.guild.id}, {"$set": {f"trialMembers.{username.casefold()}": datetime.datetime.utcnow() + datetime.timedelta(7)}})
 
-    @commands.errors
+    @trials.error
     async def trials_error(self, ctx, error):
 
         if isinstance(error, commands.MissingAnyRole):
