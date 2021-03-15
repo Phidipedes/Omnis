@@ -16,8 +16,17 @@ class trials(commands.Cog, name = "Trial Members"):
 
         self.bot = bot
 
-    @commands.command(aliases = ["trialreq", "treq", "tr"])
-    async def trialRequirement(self, ctx, amount: typing.Optional[int] = None):
+    @commands.group(aliases = ["trial", "t"])
+    @commands.has_role(738915444420903022)
+    async def trials(self, ctx):
+
+        if ctx.invoked_subcommand == None:
+
+            trialUsageEmbed = discord.Embed(title = f".trial usage", description = f".trial [add | remove | list | check | requirements | duration]\nadd - add a member to the trial list\nremove - remove a member from the trial list\nlist - list the current trial members\ncheck - check the staus of today's trial members\nrequirements - chnage the gexp requirement to pass trial\nduration - change the duration of the trial period", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+            await ctx.channel.send(embed = trialUsageEmbed)
+
+    @trials.command(aliases = ["requirement", "reqs", "req"])
+    async def requirements(self, ctx, amount: typing.Optional[int] = None):
 
         """
         Sets the trial member gexp requirement
@@ -46,8 +55,8 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await ctx.channel.send(f"Gexp requirement amount needs to be an integer.")
 
-    @commands.command(aliases = ["checktrial", "ct"])
-    async def checkTrials(self, ctx):
+    @trials.command(aliases = ["ch", "c"])
+    async def check(self, ctx):
 
         passList = []
         failList = []
@@ -86,8 +95,8 @@ class trials(commands.Cog, name = "Trial Members"):
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
 
-    @commands.command(aliases = ["atrial", "at"])
-    async def addTrial(self, ctx, username: typing.Optional[str] = None):
+    @trials.command(aliases = ["add", "a"])
+    async def add(self, ctx, username: typing.Optional[str] = None):
 
         if username == None:
 
