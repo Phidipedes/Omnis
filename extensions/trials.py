@@ -136,8 +136,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern)}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern)}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
