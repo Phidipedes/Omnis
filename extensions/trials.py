@@ -212,7 +212,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await ctx.channel.send(f"Timed out")
 
-    @trials.command(aliases = ["list", "li"])
+    @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
 
         eastern = pytz.timezone("US/Eastern")
@@ -231,7 +231,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             membersMessage = "```+ No Trial Members```"
 
-        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {eastern.localize(datetime.datetime.utcnow()).date()}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
         await ctx.channel.send(embed = trialMemberListEmbed)
 
     @trials.error
