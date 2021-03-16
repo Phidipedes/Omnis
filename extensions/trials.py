@@ -61,7 +61,7 @@ class trials(commands.Cog, name = "Trial Members"):
         Sets the trial member gexp requirement
 
         Parameters:
-            amount (Integer): the amount of gexp required to pass the trial period
+            amount (int): the amount of gexp required to pass the trial period
 
         Usage:
             o![trials|trial|t] [requirements|requirement|reqs|req] [amount]
@@ -97,7 +97,7 @@ class trials(commands.Cog, name = "Trial Members"):
         Sets the trial preiod duration
 
         Parameters:
-            days (Integer): the number of days that the trial period lasts
+            days (int): the number of days that the trial period lasts
 
         Usage:
             o![trials|trial|t] [duration|dura|dur=] [days]
@@ -266,7 +266,7 @@ class trials(commands.Cog, name = "Trial Members"):
             dayOffset (day): the number of days intot he future or past to check for trial members
 
         Usage:
-            o![trials|trial|t] [check|ch|c] [username]
+            o![trials|trial|t] [check|ch|c] [dayOffset]
 
         Example:
             o!trial check 7 >> checks if the trial members who's trial period ends in 7 day's are passing their trial.
