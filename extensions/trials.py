@@ -83,7 +83,7 @@ class trials(commands.Cog, name = "Trial Members"):
             await ctx.channel.send(f"You must give an integer number of days.")
 
     @trials.command(aliases = ["ch", "c"])
-    async def check(self, ctx):
+    async def check(self, ctx, dayOffset: typing.Optional[int] = 0):
 
         eastern = pytz.timezone("US/Eastern")
 
@@ -96,7 +96,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == eastern.localize(datetime.datetime.utcnow()).date():
+            if trial["memberDate"].date() == eastern.localize(datetime.datetime.utcnow()).date() + datetime.timedelta(days = dayOffset):
 
                 for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
 
