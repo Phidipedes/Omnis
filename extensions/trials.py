@@ -136,8 +136,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.date.today()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.date.today()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern)}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern)}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
@@ -172,13 +172,13 @@ class trials(commands.Cog, name = "Trial Members"):
 
             else:
 
-                trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username.casefold(), "memberDate": eastern.localize(datetime.datetime.utcnow()) + datetime.timedelta(trialDuration)}}})
+                trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username.casefold(), "memberDate": datetime.datetime.utcnow().astimezone(eastern) + datetime.timedelta(trialDuration)}}})
 
-                await ctx.channel.send(f"Member {username.casefold()} starting trial on {eastern.localize(datetime.datetime.utcnow()).date()}. (Member on {datetime.datetime.now(tzinfo = eastern).date() + datetime.timedelta(trialDuration)})")
+                await ctx.channel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date()}. (Member on {datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)})")
 
                 if ctx.channel != trialDateChannel:
 
-                    await trialDateChannel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.now(tzinfo = eastern).date()}. (Member on {datetime.datetime.now(tzinfo = eastern).date() + datetime.timedelta(trialDuration)})")
+                    await trialDateChannel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date()}. (Member on {datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)})")
 
         except asyncio.TimeoutError:
 
