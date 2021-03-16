@@ -32,8 +32,6 @@ class members(commands.Cog, name = "Member Updates"):
 
             member["expHistory"]["total"] = sum(member["expHistory"].values())
 
-            print(member["expHistory"])
-
             if member["uuid"] not in cachedData["members"].keys():
 
                 await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
