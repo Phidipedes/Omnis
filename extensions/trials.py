@@ -96,7 +96,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == eastern.localize(datetime.datetime.utcnow()).date() + datetime.timedelta(days = dayOffset):
+            if trial["memberDate"].date() == datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset):
 
                 for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
 
@@ -136,8 +136,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')} ----- {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')} ----- {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
@@ -178,7 +178,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
                 if ctx.channel != trialDateChannel:
 
-                    await trialDateChannel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date()}. (Member on {datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)})")
+                    await trialDateChannel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')})")
 
         except asyncio.TimeoutError:
 
@@ -219,7 +219,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
 
-        membersMessage = f"Username ~-~-~ Member Date"
+        membersMessage = f"Username ~-~-~ Member Date (mm/dd/yyyy)"
 
         if len(trialData["trialMembers"]) > 0:
 
@@ -231,7 +231,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             membersMessage = "```+ No Trial Members```"
 
-        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date()}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
         await ctx.channel.send(embed = trialMemberListEmbed)
 
     @trials.error
