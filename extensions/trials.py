@@ -156,7 +156,7 @@ class trials(commands.Cog, name = "Trial Members"):
                 await ctx.channel.send(f"What member do you want to log as trial member?", delete_after = 5)
                 usernameMessage = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
                 username = usernameMessage.content
-                usernameMessage.delete()
+                await usernameMessage.delete()
 
             if username.casefold() not in [member["username"] for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values()]:
 
@@ -247,7 +247,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             for trial in trialData["trialMembers"]:
 
-                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date()}```"
+                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date().strftime('%d/%m/%Y')}```"
 
         else:
 
