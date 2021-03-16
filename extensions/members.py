@@ -32,6 +32,8 @@ class members(commands.Cog, name = "Member Updates"):
 
             member["expHistory"]["total"] = sum(member["expHistory"].values())
 
+            print(member["expHistory"])
+
             if member["uuid"] not in cachedData["members"].keys():
 
                 await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
@@ -55,6 +57,8 @@ class members(commands.Cog, name = "Member Updates"):
                     await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.rank": currentRank}})
                     memberRankChangeEmbed = discord.Embed(title = f"Member Rank Changed", description = f"UUID: {member['uuid']}\nUsername:{currentUsername}\n{cachedRank} **-->** {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberRankChangeEmbed)
+
+            await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.gexp": member["expHistory"]}})
 
         uuidsLeft = []
 
