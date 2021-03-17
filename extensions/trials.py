@@ -241,7 +241,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
 
-        membersMessage = f"Username ~-~-~ Member Date (mm/dd/yyyy)"
+        membersMessage = f"Current Trial GEXP Requirement: {trialData['trialReq']}\nCurrent Trial Period Duration: {trialData['trialDuration']} days\nUsername ~-~-~ Member Date (mm/dd/yyyy)"
 
         if len(trialData["trialMembers"]) > 0:
 
