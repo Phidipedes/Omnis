@@ -247,7 +247,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
             for trial in trialData["trialMembers"]:
 
-                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date().strftime('%d/%m/%Y')}```"
+                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date().strftime('%m/%d/%Y')}```"
 
         else:
 
@@ -397,6 +397,10 @@ class trials(commands.Cog, name = "Trial Members"):
 
         await trialDateChannel.send(embed = passingEmbed)
         await trialDateChannel.send(embed = failingEmbed)
+
+        updatedTrials = [trial for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"] if trial["username"] not in (passList + failList)]
+
+        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
 
     @checkTrialMembers.before_loop
     async def beforeCheckLoop(self):
