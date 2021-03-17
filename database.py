@@ -5,3 +5,4 @@ motorClient = motor.motor_asyncio.AsyncIOMotorClient("mongodb+srv://Phidipedes:C
 omnisDB = motorClient["omnis"]
 trialsCollection = omnisDB["trials"]
 memberCollection = omnisDB["members"]
+activityCollection = omnisDB["activity"]
