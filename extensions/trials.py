@@ -236,24 +236,28 @@ class trials(commands.Cog, name = "Trial Members"):
         Example:
             o!trial list >> lists all the trial members
         """
-
+        
         eastern = pytz.timezone("US/Eastern")
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
+        
+        activeDates = []
+        for trial in trialData['trialMembers']:
 
-        membersMessage = f"Current Trial GEXP Requirement: {trialData['trialReq']}\nCurrent Trial Period Duration: {trialData['trialDuration']} days\nUsername ~-~-~ Member Date (mm/dd/yyyy)"
+            if trial['memberDate'].date() not in activeDates:
 
-        if len(trialData["trialMembers"]) > 0:
+                activeDates.append(trial['memberDate'].date())
 
-            for trial in trialData["trialMembers"]:
-
-                membersMessage += f"\n```+ {trial['username']} ~-~-~ {trial['memberDate'].date().strftime('%m/%d/%Y')}```"
-
-        else:
-
-            membersMessage = "```+ No Trial Members```"
+        membersMessage = f"Current Trial GEXP Requirement: {trialData['trialReq']}\nCurrent Trial Period Duration: {trialData['trialDuration']} days\nTotal Trial Members: {len(trialData['trialMembers'])}"
 
         trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+        
+        for date in activeDates:
+
+            dateMessage = "```+ " + "\n+ ".join([trial['username'] for trial in trialData['trialMembers'] if trial['memberDate'].date() == date]) + "```"
+
+            trialMemberListEmbed.add_field(name = f"--- Member on {date.strftime('%m/%d/%Y')} (mm/dd/yyyy) ---", value = dateMessage, inline = False)
+        
         await ctx.channel.send(embed = trialMemberListEmbed)
 
     @trials.command(aliases = ["ch", "c"])
@@ -291,13 +295,17 @@ class trials(commands.Cog, name = "Trial Members"):
 
                         gexpEarned = member["gexp"]["total"]
 
-                if gexpEarned >= trialData["trialReq"]:
+                    else:
 
-                    passList.append([trial["username"], gexpEarned])
+                        continue
 
-                else:
+                    if gexpEarned >= trialData["trialReq"]:
 
-                    failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
+                        passList.append([trial["username"], gexpEarned])
+
+                    else:
+
+                        failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
 
         passingMessage = ""
 
