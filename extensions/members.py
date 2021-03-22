@@ -17,7 +17,7 @@ class members(commands.Cog, name = "Member Updates"):
         self.updateMembers.start() #pylint: disable=no-member
 
     @tasks.loop(minutes = 3)
-    async def updateMembers(self)  :
+    async def updateMembers(self):
 
         memberLogChannel = self.bot.get_channel(int(os.getenv("MEMBER_LOG_CHANNEL_ID")))
 
@@ -26,12 +26,9 @@ class members(commands.Cog, name = "Member Updates"):
 
         for member in hypixelData["guild"]["members"]:
 
-            mojangData = requests.get(f"https://api.mojang.com/user/profiles/{member['uuid']}/names").json()
+            mojangData = requests.get(f"https://api.ashcon.app/mojang/v2/user/{member['uuid']}").json()
 
-            print(member['uuid'])
-            print(mojangData)
-
-            currentUsername = mojangData[-1]["name"].casefold()
+            currentUsername = mojangData["username"].casefold()
             currentRank = member["rank"]
 
             member["expHistory"]["total"] = sum(member["expHistory"].values())
