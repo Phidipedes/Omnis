@@ -360,7 +360,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == eastern.localize(datetime.datetime.utcnow()).date():
+            if trial["memberDate"].date() == eastern.localize(datetime.datetime.now()).date():
 
                 for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
 
