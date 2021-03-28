@@ -331,8 +331,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {(datetime.datetime.now().astimezone(eastern).date() - datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {(datetime.datetime.now().astimezone(eastern).date() - datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
@@ -360,7 +360,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == eastern.localize(datetime.datetime.now()).date():
+            if trial["memberDate"].date() == (datetime.datetime.now().astimezone(eastern)).date():
 
                 for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
 
@@ -406,7 +406,7 @@ class trials(commands.Cog, name = "Trial Members"):
         await trialDateChannel.send(embed = passingEmbed)
         await trialDateChannel.send(embed = failingEmbed)
 
-        updatedTrials = [trial for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"] if trial["username"] not in (passList + failList)]
+        updatedTrials = [trial for trial in trialMembers if trial["username"] not in (passList + failList)]
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
 
