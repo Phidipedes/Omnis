@@ -415,7 +415,9 @@ class trials(commands.Cog, name = "Trial Members"):
 
         eastern = pytz.timezone("US/Eastern")
 
-        startTime = datetime.datetime.now(eastern).replace(hour = 23, minute = 59, second = 30)
+        startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30)
+
+        print(f"{(startTime - datetime.datetime.now()).total_seconds()} seconds until loop starts on {startTime.strftime('%A, %B %d, %Y')}")
 
         print(startTime)
 
