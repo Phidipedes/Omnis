@@ -72,9 +72,9 @@ class members(commands.Cog, name = "Member Updates"):
 
                 me = self.bot.get_user(693132768510607400)
 
-                me.send(f"Something went wrong with the following data:\n\Hypixel Data:\n{member}")
-                me.send(f"Mojang Data:\n{mojangData}")
-                me.send(f"Cached Data:\n{cachedUsername}, {cachedRank}")
+                await me.send(f"Something went wrong with the following data:\nHypixel Data:\n{member}")
+                await me.send(f"Mojang Data:\n{mojangData}")
+                await me.send(f"Cached Data:\n{cachedUsername}, {cachedRank}")
 
                 print("somethign went wrong on the previous username. waiting 300 seconds and trying again")
                 await asyncio.sleep(300)
