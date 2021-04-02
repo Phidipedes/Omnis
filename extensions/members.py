@@ -27,9 +27,9 @@ class members(commands.Cog, name = "Member Updates"):
 
         trialMembersList = [trial["username"] for trial in trialData["trialMembers"]]
 
-        try:
+        for member in hypixelData["guild"]["members"]:
 
-            for member in hypixelData["guild"]["members"]:
+            try:
 
                 mojangData = requests.get(f"https://api.ashcon.app/mojang/v2/user/{member['uuid']}").json()
 
@@ -68,10 +68,16 @@ class members(commands.Cog, name = "Member Updates"):
 
                 await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.gexp": member["expHistory"]}})
 
-        except:
+            except:
 
-            print("somethign went wrong on the previous username. waiting 300 seconds and trying again")
-            await asyncio.sleep(300)
+                me = self.bot.get_user(693132768510607400)
+
+                me.send(f"Something went wrong with the following data:\n\Hypixel Data:\n{member}")
+                me.send(f"Mojang Data:\n{mojangData}")
+                me.send(f"Cached Data:\n{cachedUsername}, {cachedRank}")
+
+                print("somethign went wrong on the previous username. waiting 300 seconds and trying again")
+                await asyncio.sleep(300)
 
         uuidsLeft = []
 
