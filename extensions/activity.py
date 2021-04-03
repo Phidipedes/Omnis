@@ -94,7 +94,7 @@ class activity(commands.Cog, name = "Activity"):
         await ctx.channel.send(embed = passEmbed)
         await ctx.channel.send(embed = failEmbed)
 
-    @activity.group(aliases = ["white", "wl", "w"])
+    @commands.group(aliases = ["white", "wl", "w"])
     async def whitelist(self, ctx):
 
         if ctx.invoked_subcommand == None:
@@ -102,7 +102,7 @@ class activity(commands.Cog, name = "Activity"):
             whitelistCommandUsageEmbed = discord.Embed(title = f"Whitelist Command Usage", description = f"whitelist [add|remove|list]\nadd - add a member to the whitelist\nremove - remove a member from the whitelist\nlist - list every member that is on the whitelist")
             await ctx.channel.send(embed = whitelistCommandUsageEmbed)
 
-    @whitelist.command()
+    @whitelist.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str] = None):
 
         eastern = pytz.timezone("US/Eastern")
@@ -120,13 +120,60 @@ class activity(commands.Cog, name = "Activity"):
 
                 await ctx.channel.send(f"Timed out")
 
-            if username not in [member["username"] for member in activityData["members"].values()]:
+        username = username.casefold()
 
-                await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
-                return
+        if username not in [member["username"] for member in activityData["members"].values()]:
+
+            await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
+            return
 
         activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
         await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}")
+
+    @whitelist.command(aliases = ["rem", "rm", "r"])
+    async def remove(self, ctx, username: typing.Optional[str] = None):
+
+        activityData = activityCollection.find_one({"_id": "envision"})
+        whitelistedMembers = [member["username"] for member in activityData["whitelist"]]
+
+        if username == None:
+
+            try:
+            
+                await ctx.channel.send(f"What username do you want to remove from the whitelist?")
+                username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content.casefold()
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out")
+
+        username = username.casefold()
+
+        if username not in whitelistedMembers:
+
+            await ctx.channel.send(f"That member is not ont he waitlist.")
+            return
+
+        activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": username}}})
+        await ctx.channel.send(f"Unwhitelisted member {username}")
+
+    @whitelist.command(aliases = ["list", "li", "l"])
+    async def _list(self, ctx):
+
+        activityData = activityCollection.find_one({"_id": "envision"})
+        whitelist = activityData["whitelist"]
+
+        whitelistEmbed = discord.Embed(title = f"⬜ Whitelisted Members ⬜", description = f"Whitelist duration: {activityData['whitelistDuration']}\nWhitelisted Members: {len(whitelist)}", color = discord.Color.lighter_grey(), timestamp = datetime.datetime.utcnow())
+
+        if len(whitelist) > 0:
+        
+            for chunk in numpy.array_split(whitelist, (len(whitelist) / 22)):
+
+                whitelistEmbed.add_field(name = f"--------------------------------------------------", value = ("```" + "\n".join([f"+ {member['username']} unwhitelisted on {member['unwhitelistedDate'].date().strftime('%m/%d/%Y')}" for member in chunk]) + "```"))
+
+        else:
+
+            whitelist.add_field(name = f"--------------------------------------------------", value = f"```No whitelisted members```")
 
 def setup(bot):
 
