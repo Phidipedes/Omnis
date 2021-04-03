@@ -107,7 +107,7 @@ class activity(commands.Cog, name = "Activity"):
 
         eastern = pytz.timezone("US/Eastern")
 
-        activityData = await memberCollection.find_one({"_id": "envision"})
+        activityData = await activityCollection.find_one({"_id": "envision"})
 
         if username == None:
 
