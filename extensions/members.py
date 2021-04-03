@@ -24,7 +24,6 @@ class members(commands.Cog, name = "Member Updates"):
         hypixelData = requests.get(f"https://api.hypixel.net/guild?key={os.getenv('HYPIXEL_API_KEY')}&name=envision").json()
         cachedData = await memberCollection.find_one({"_id": "envision"})
         trialData = await trialsCollection.find_one({"_id": "envision"})
-
         trialMembersList = [trial["username"] for trial in trialData["trialMembers"]]
 
         for member in hypixelData["guild"]["members"]:
