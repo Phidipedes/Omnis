@@ -351,22 +351,26 @@ class trials(commands.Cog, name = "Trial Members"):
 
         trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
+        now = datetime.datetime.now().astimezone(eastern)
+
         passList = []
         failList = []
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
-        
         trialMembers = trialData["trialMembers"]
+        memberData = await memberCollection.find_one({"_id": "envision"})
+        members = memberData["members"].values()
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == (datetime.datetime.now().astimezone(eastern)).date():
+            if trial["username"] not in [member["username"] for member in members]:
 
-                for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
+                print(f"Member {trial['username']} was listed as a trial but is not in the guild. Skipping them")
+                continue
 
-                    if member["username"] == trial["username"]:
+            if trial["memberDate"].date() == now.date():
 
-                        gexpEarned = member["gexp"]["total"]
+                gexpEarned = next(member["gexp"]["total"] for member in members if member["username"] == trial["username"])
 
                 if gexpEarned >= trialData["trialReq"]:
 
@@ -376,39 +380,29 @@ class trials(commands.Cog, name = "Trial Members"):
 
                     failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
 
-        passingMessage = ""
-
         if len(passList) > 0:
 
-            for passing in passList:
-
-                passingMessage += f"```+{passing[0]} --- earned {passing[1]} gexp```\n"
+            passingMessage = "\n".join([f"```+ {passing[0]} --- earned {passing[1]} gexp```\n" for passing in passList])
 
         else:
             
             passingMessage = "```No passing trials```"
 
-        failingMessage = ""
-
         if len(failList) > 0:
 
-            for failing in failList:
-
-                failingMessage += f"```+{failing[0]} --- missing {failing[1]} gexp```\n"
+            failingMessage = "\n".join([f"```+ {failing[0]} --- missing {failing[1]} gexp```\n" for failing in failList])
 
         else:
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.date.today()}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.date.today()}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ ~-~-~-~-~-~ {datetime.date.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')}", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ ~-~-~-~-~-~ {datetime.date.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')}", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await trialDateChannel.send(embed = passingEmbed)
         await trialDateChannel.send(embed = failingEmbed)
 
-        updatedTrials = [trial for trial in trialMembers if trial["username"] not in (passList + failList)]
-
-        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
+        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": [trial for trial in trialMembers if trial["username"] not in (passList + failList)]}})
 
     @checkTrialMembers.before_loop
     async def beforeCheckLoop(self):
