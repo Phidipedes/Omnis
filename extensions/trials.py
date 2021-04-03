@@ -287,45 +287,34 @@ class trials(commands.Cog, name = "Trial Members"):
 
         for trial in trialMembers:
 
-            if trial["memberDate"].date() == datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset):
+            if trial["username"] not in [member["username"] for member in members]:
 
-                for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values():
+                print(f"Member {trial['username']} was listed as a trial but is not in the guild. Skipping them")
+                continue
 
-                    if member["username"] == trial["username"]:
+            if trial["memberDate"].date() == now.date():
 
-                        gexpEarned = member["gexp"]["total"]
+                gexpEarned = next(member["gexp"]["total"] for member in members if member["username"] == trial["username"])
 
-                    else:
+                if gexpEarned >= trialData["trialReq"]:
 
-                        continue
+                    passList.append([trial["username"], gexpEarned])
 
-                    if gexpEarned >= trialData["trialReq"]:
+                else:
 
-                        passList.append([trial["username"], gexpEarned])
-
-                    else:
-
-                        failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
-
-        passingMessage = ""
+                    failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
 
         if len(passList) > 0:
 
-            for passing in passList:
-
-                passingMessage += f"```+{passing[0]} --- earned {passing[1]} gexp```\n"
+            passingMessage = "\n".join([f"```+ {passing[0]} --- earned {passing[1]} gexp```\n" for passing in passList])
 
         else:
             
             passingMessage = "```No passing trials```"
 
-        failingMessage = ""
-
         if len(failList) > 0:
 
-            for failing in failList:
-
-                failingMessage += f"```+{failing[0]} --- missing {failing[1]} gexp```\n"
+            failingMessage = "\n".join([f"```+ {failing[0]} --- missing {failing[1]} gexp```\n" for failing in failList])
 
         else:
             
