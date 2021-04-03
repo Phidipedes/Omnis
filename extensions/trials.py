@@ -295,7 +295,7 @@ class trials(commands.Cog, name = "Trial Members"):
                 print(f"Member {trial['username']} was listed as a trial but is not in the guild. Skipping them")
                 continue
 
-            if trial["memberDate"].date() == now.date():
+            if trial["memberDate"].date() == (now.date() + datetime.timedelta(days = dayOffset)):
 
                 gexpEarned = next(member["gexp"]["total"] for member in members if member["username"] == trial["username"])
 
@@ -323,8 +323,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {(datetime.datetime.now().astimezone(eastern).date() - datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {(datetime.datetime.now().astimezone(eastern).date() - datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
