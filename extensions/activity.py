@@ -7,6 +7,7 @@ import datetime
 from database import activityCollection, memberCollection #pylint: disable = import-error
 import typing
 import numpy
+import pytz
 
 class activity(commands.Cog, name = "Activity"):
 
@@ -92,6 +93,40 @@ class activity(commands.Cog, name = "Activity"):
 
         await ctx.channel.send(embed = passEmbed)
         await ctx.channel.send(embed = failEmbed)
+
+    @activity.group(aliases = ["white", "wl", "w"])
+    async def whitelist(self, ctx):
+
+        if ctx.invoked_subcommand == None:
+
+            whitelistCommandUsageEmbed = discord.Embed(title = f"Whitelist Command Usage", description = f"whitelist [add|remove|list]\nadd - add a member to the whitelist\nremove - remove a member from the whitelist\nlist - list every member that is on the whitelist")
+            await ctx.channel.send(embed = whitelistCommandUsageEmbed)
+
+    @whitelist.command()
+    async def add(self, ctx, username: typing.Optional[str] = None):
+
+        eastern = pytz.timezone("US/Eastern")
+
+        activityData = await memberCollection.find_one({"_id": "envision"})
+
+        if username == None:
+
+            try:
+            
+                await ctx.channel.send(f"What username do you want to add to the whitelist?")
+                username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content.casefold()
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out")
+
+            if username not in [member["username"] for member in activityData["members"].values()]:
+
+                await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
+                return
+
+        activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
+        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) - datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}")
 
 def setup(bot):
 
