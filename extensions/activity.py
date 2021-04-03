@@ -126,7 +126,7 @@ class activity(commands.Cog, name = "Activity"):
                 return
 
         activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
-        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) - datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}")
+        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}")
 
 def setup(bot):
 
