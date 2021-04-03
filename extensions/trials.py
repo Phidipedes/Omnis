@@ -282,8 +282,9 @@ class trials(commands.Cog, name = "Trial Members"):
         failList = []
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
-        
         trialMembers = trialData["trialMembers"]
+        memberData = await memberCollection.find_one({"_id": "envision"})
+        members = memberData["members"].values()
 
         for trial in trialMembers:
 
