@@ -108,6 +108,7 @@ class activity(commands.Cog, name = "Activity"):
         eastern = pytz.timezone("US/Eastern")
 
         activityData = await activityCollection.find_one({"_id": "envision"})
+        memberData = memberCollection.find_one({"_id": "envision"})
 
         if username == None:
 
@@ -122,7 +123,7 @@ class activity(commands.Cog, name = "Activity"):
 
         username = username.casefold()
 
-        if username not in [member["username"] for member in activityData["members"].values()]:
+        if username not in [member["username"] for member in memberData["members"].values()]:
 
             await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
             return
