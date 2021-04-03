@@ -278,6 +278,8 @@ class trials(commands.Cog, name = "Trial Members"):
 
         eastern = pytz.timezone("US/Eastern")
 
+        now = datetime.datetime.now().astimezone(eastern)
+
         passList = []
         failList = []
 
