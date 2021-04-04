@@ -421,6 +421,10 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await ctx.channel.send(f"You are missing a required role to use this command!")
 
+        else:
+
+            await ctx.channel.send(f"{datetime.datetime.now()}\n\nAn unexepted error occured:\n{error}\n\nTake a screenshot of this and send it to Phidipedes#4636.")
+
     @tasks.loop(hours = 24)
     async def checkTrialMembers(self):
 
