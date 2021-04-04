@@ -2,17 +2,17 @@ import discord
 from discord.ext import commands, tasks
 from discord import utils
 
-import typing
-import pytz
 import asyncio
 import datetime
+import itertools
+import operator
 import os
-
-import pprint
+import pytz
+import typing
 
 from checks import messageCheck #pylint: disable=import-error
-
 from database import trialsCollection, memberCollection #pylint: disable=import-error
+from timezones import eastern #pylint: disable = import-error
 
 class trials(commands.Cog, name = "Trial Members"):
 
@@ -55,7 +55,7 @@ class trials(commands.Cog, name = "Trial Members"):
             await ctx.channel.send(embed = trialUsageEmbed)
 
     @trials.command(aliases = ["requirement", "reqs", "req"])
-    async def requirements(self, ctx, amount: typing.Optional[int] = None):
+    async def requirements(self, ctx, amount: typing.Optional[int]):
 
         """
         Sets the trial member gexp requirement
@@ -70,28 +70,38 @@ class trials(commands.Cog, name = "Trial Members"):
             o!trial req 200000 >> sets trial requirement to 200,000 gexp
         """
 
+        await ctx.message.delete()
+
+        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
+
         try:
 
             if amount == None:
 
-                await ctx.channel.send(f"What do you want to set the gexp requirement for trial members to?")
-                amountQuestionMessage = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
-
-                amount = int(amountQuestionMessage.content)
-
-            await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialReq": amount}})
-            await ctx.channel.send(f"Trial gexp requirement set to {amount}")
+                await ctx.channel.send(f"What do you want to set the gexp requirement for trial members to?", delete_after = 15)
+                amountQuestionResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await amountQuestionResponse.delete()
+                amount = int(amountQuestionResponse.content)
 
         except asyncio.TimeoutError:
 
-            await ctx.channel.send(f"Timed out.")
+            await ctx.channel.send(f"Timed out.", delete_after = 15)
+            return
 
         except ValueError:
 
-            await ctx.channel.send(f"Gexp requirement amount needs to be an integer.")
+            await ctx.channel.send(f"Gexp requirement amount needs to be an integer.", delete_after = 15)
+            return
+
+        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialReq": amount}})
+        await ctx.channel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author.name}")
+
+        if ctx.channel != trialDateChannel:
+
+            await trialDateChannel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author.name}")
 
     @trials.command(aliases = ["dura", "dur"])
-    async def duration(self, ctx, duration: typing.Optional[int] = None):
+    async def duration(self, ctx, duration: typing.Optional[int]):
 
         """
         Sets the trial preiod duration
@@ -106,27 +116,39 @@ class trials(commands.Cog, name = "Trial Members"):
             o!trial dura 7 >> sets trial period to 7 days
         """
 
-        try:
+        await ctx.message.delete()
 
-            if duration == None:
+        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
-                await ctx.channel.send(f"How many days long do you want the trial period to be?")
-                duration = int((await ctx.channel.wait_for("message", timeout = 300, check = messageCheck(ctx))).content)
+        if duration == None:
 
-            await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
+            try:
+            
+                await ctx.channel.send(f"How many days long do you want the trial period to be?", delete_after = 15)
+                durationResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await durationResponse.delete()
+                duration = int(durationResponse.content)
 
-            await ctx.channel.send(f"Trial period duration set to {duration} days.")
+            except asyncio.TimeoutError:
 
-        except asyncio.TimeoutError:
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
 
-            await ctx.channel.send(f"Timed out")
+            except ValueError:
 
-        except ValueError:
+                await ctx.channel.send(f"You must give an integer number of days.", delete_after = 15)
+                return
 
-            await ctx.channel.send(f"You must give an integer number of days.")
+        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
+
+        await ctx.channel.send(f"Trial period duration set to {duration} days by {ctx.author.name}")
+
+        if ctx.channel != trialDateChannel:
+
+            await trialDateChannel.send(f"Trial period duration set to {duration} days by {ctx.author.name}")
 
     @trials.command(aliases = ["a"])
-    async def add(self, ctx, username: typing.Optional[str] = None):
+    async def add(self, ctx, username: typing.Optional[str]):
 
         """
         Adds a member to the trial member list
@@ -141,47 +163,50 @@ class trials(commands.Cog, name = "Trial Members"):
             o!trial add Phidipedes >> adds the user 'Phidipedes' to the trial member list
         """
 
-        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
-
         await ctx.message.delete()
 
-        try:
+        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
-            eastern = pytz.timezone("US/Eastern")
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+        trialDuration = trialData["trialDuration"]
+        memberData = await memberCollection.find_one({"_id": "envision"})
+        members = memberData["members"].values()
 
-            trialDuration = (await trialsCollection.find_one({"_id": "envision"}))["trialDuration"]
+        if username == None:
 
-            if username == None:
-
-                await ctx.channel.send(f"What member do you want to log as trial member?", delete_after = 5)
+            try:
+            
+                await ctx.channel.send(f"What member do you want to log as trial member?", delete_after = 15)
                 usernameMessage = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
-                username = usernameMessage.content
+                username = usernameMessage.content.casefold()
                 await usernameMessage.delete()
 
-            if username.casefold() not in [member["username"] for member in (await memberCollection.find_one({"_id": "envision"}))["members"].values()]:
+            except asyncio.TimeoutError:
 
-                await ctx.channel.send(f"That user is not in the guild. Make sure you spelled the name correctly! If you are sure you spelled the name correctly and that the member *is* in the guild, wait a few minutes and try again. The cache updates every minute with new members.", delete_after = 8)
+                await ctx.channel.send(f"Timed out.", delete_after = 15)
+                return
 
-            elif username.casefold() in [trial["username"] for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"]]:
+        username = username.casefold()
 
-                await ctx.channel.send(f"This member is already in their trial period.", delete_after = 5)
+        if username not in [member["username"] for member in members]:
 
-            else:
+            await ctx.channel.send(f"That user is not in the guild. Make sure you spelled the name correctly! If you are sure you spelled the name correctly and that the member *is* in the guild, wait a few minutes and try again. The cache updates every minute with new members.", delete_after = 15)
+            return
 
-                trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username.casefold(), "memberDate": datetime.datetime.utcnow().astimezone(eastern) + datetime.timedelta(trialDuration)}}})
+        if username in [trial["username"] for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"]]:
 
-                await ctx.channel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date()}. (Member on {datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)})")
+            await ctx.channel.send(f"This member is already in their trial period.", delete_after = 15)
+            return
 
-                if ctx.channel != trialDateChannel:
+        trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": (datetime.datetime.now().astimezone(eastern) + datetime.timedelta(trialDuration)).replace(hour = 0, minute = 0, second = 0, microsecond= 0)}}})
+        await ctx.channel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date()}. (Member on {datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)}). Added by {ctx.author.name}")
 
-                    await trialDateChannel.send(f"Member {username.casefold()} starting trial on {datetime.datetime.utcnow().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.utcnow().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')})")
+        if ctx.channel != trialDateChannel:
 
-        except asyncio.TimeoutError:
-
-            await ctx.channel.send(f"Timed out.")
+            await trialDateChannel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')}) Added by {ctx.author.name}")
 
     @trials.command(aliases = ["rem", "r"])
-    async def remove(self, ctx, username: typing.Optional[str] = None):
+    async def remove(self, ctx, username: typing.Optional[str]):
 
         """
         Removes a member from the trial member list
@@ -196,30 +221,40 @@ class trials(commands.Cog, name = "Trial Members"):
             o!trial rem Phidipedes >> removes the user 'Phidipedes' from the trial member list
         """
 
-        try:
-        
-            if username == None:
+        await ctx.message.delete()
 
-                await ctx.channel.send(f"What member do you want to remove from the trial list?")
-                username = (await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content.casefold()
+        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
-            if username.casefold() not in [trial["username"] for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"]]:
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+        trialMembers = trialData["trialMembers"]
 
-                await ctx.channel.send(f"That user is not in the trial member list. Make sure you spelled the name correctly!")
+        if username == None:
 
-            else:
+            try:
 
-                updatedTrials = [trial for trial in (await trialsCollection.find_one({"_id": "envision"}))["trialMembers"] if not trial["username"] == username.casefold()]
+                await ctx.channel.send(f"What member do you want to remove from the trial list?", delete_after = 15)
+                usernameResponseMessage = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                username = usernameResponseMessage.content.casefold()
+                await usernameResponseMessage.delete()
 
-                pprint.pprint(updatedTrials)
+            except asyncio.TimeoutError:
 
-                await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": updatedTrials}})
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
 
-                await ctx.channel.send(f"Removed {username.casefold()} from the trial members list.")
+        username = username.casefold()
 
-        except asyncio.TimeoutError:
+        if username not in [trial["username"] for trial in trialMembers]:
 
-            await ctx.channel.send(f"Timed out")
+            await ctx.channel.send(f"That user is not in the trial member list. Make sure you spelled the name correctly!", delete_after = 15)
+            return
+
+        await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": username}}})
+        await ctx.channel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author.name}")
+
+        if ctx.channel != trialDateChannel:
+
+            await trialDateChannel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author.name}")
 
     @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
@@ -237,26 +272,18 @@ class trials(commands.Cog, name = "Trial Members"):
             o!trial list >> lists all the trial members
         """
         
-        eastern = pytz.timezone("US/Eastern")
+        await ctx.message.delete()
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
-        
-        activeDates = []
-        for trial in trialData['trialMembers']:
+        trialMembers = trialData["trialMembers"]
 
-            if trial['memberDate'].date() not in activeDates:
+        membersMessage = f"Trial GEXP Requirement: {trialData['trialReq']}\nTrial Period Duration: {trialData['trialDuration']} days\nTrial Members: {len(trialData['trialMembers'])}"
 
-                activeDates.append(trial['memberDate'].date())
+        trialMemberListEmbed = discord.Embed(title = f"📔Trial Member List 📔 {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
 
-        membersMessage = f"Current Trial GEXP Requirement: {trialData['trialReq']}\nCurrent Trial Period Duration: {trialData['trialDuration']} days\nTotal Trial Members: {len(trialData['trialMembers'])}"
+        for key, chunk in itertools.groupby(sorted(trialMembers, key = operator.itemgetter('memberDate')), key = operator.itemgetter('memberDate')):
 
-        trialMemberListEmbed = discord.Embed(title = f"Trial Member List ~-~-~-~-~-~ {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}", description = membersMessage, color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
-        
-        for date in activeDates:
-
-            dateMessage = "```+ " + "\n+ ".join([trial['username'] for trial in trialData['trialMembers'] if trial['memberDate'].date() == date]) + "```"
-
-            trialMemberListEmbed.add_field(name = f"--- Member on {date.strftime('%m/%d/%Y')} (mm/dd/yyyy) ---", value = dateMessage, inline = False)
+            trialMemberListEmbed.add_field(name = f"--- Member on {key.strftime('%m/%d/%Y')} (mm/dd/yyyy) ---", value = ("```" + "\n".join([f"+ {member['username']}" for member in chunk]) + "```"), inline = False)
         
         await ctx.channel.send(embed = trialMemberListEmbed)
 
@@ -275,9 +302,7 @@ class trials(commands.Cog, name = "Trial Members"):
         Example:
             o!trial check 7 >> checks if the trial members who's trial period ends in 7 day's are passing their trial.
         """
-
-        eastern = pytz.timezone("US/Eastern")
-
+        
         now = datetime.datetime.now().astimezone(eastern)
 
         passList = []
@@ -295,7 +320,7 @@ class trials(commands.Cog, name = "Trial Members"):
                 print(f"Member {trial['username']} was listed as a trial but is not in the guild. Skipping them")
                 continue
 
-            if trial["memberDate"].date() == (now.date() + datetime.timedelta(days = dayOffset)):
+            if trial["memberDate"].date() == (now + datetime.timedelta(days = dayOffset)).date():
 
                 gexpEarned = next(member["gexp"]["total"] for member in members if member["username"] == trial["username"])
 
@@ -323,8 +348,8 @@ class trials(commands.Cog, name = "Trial Members"):
             
             failingMessage = "```No failing trials```"
 
-        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} ({datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        passingEmbed = discord.Embed(title = f"✅ Passing Trial Members ✅ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} (as of {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = passingMessage, color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failingEmbed = discord.Embed(title = f"❌ Failing Trial Members ❌ {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(days = dayOffset)).strftime('%A, %B %d, %Y')} (as of {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')})", description = failingMessage, color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
 
         await ctx.channel.send(embed = passingEmbed)
         await ctx.channel.send(embed = failingEmbed)
@@ -338,8 +363,6 @@ class trials(commands.Cog, name = "Trial Members"):
 
     @tasks.loop(hours = 24)
     async def checkTrialMembers(self):
-
-        eastern = pytz.timezone("US/Eastern")
 
         trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
@@ -398,8 +421,6 @@ class trials(commands.Cog, name = "Trial Members"):
 
     @checkTrialMembers.before_loop
     async def beforeCheckLoop(self):
-
-        eastern = pytz.timezone("US/Eastern")
 
         startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30)
 
