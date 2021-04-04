@@ -5,6 +5,7 @@ from discord.utils import sleep_until
 from checks import messageCheck #pylint: disable = import-error
 from database import activityCollection, memberCollection, trialsCollection #pylint: disable = import-error
 from timezones import eastern #pylint: disable = import-error
+from tools import next_weekday #pylint: disable = import-error
 
 import asyncio
 import datetime
@@ -21,6 +22,7 @@ class activity(commands.Cog, name = "Activity"):
 
         self.bot = bot
         self.updateWhitelist.start() #pylint: disable = no-member
+        self.activityCheck.start() #pylint: disable = no-member
 
     @commands.group(aliases = ["inactivity", "act", "inact", "a", "ia"])
     @commands.has_any_role(738915444420903022, 716599787780177954, 730175515809546300)
@@ -423,16 +425,7 @@ class activity(commands.Cog, name = "Activity"):
     async def activityCheck(self):
 
         """
-        Starts a manual inactivity check
-
-        Parameters:
-            none
-
-        Usage:
-            o![inactivity|activity|ia|a] [check|ch|c]
-
-        Example:
-            o!a check >> shows which members are passing the inactivity check
+        Automatic inactivity check
         """
 
         activityLogChannel = self.bot.get_channel(int(os.getenv("ACTIVITY_LOG_CHANNEL_ID")))
@@ -498,6 +491,14 @@ class activity(commands.Cog, name = "Activity"):
         await activityLogChannel.send(embed = passEmbed)
         await activityLogChannel.send(embed = failEmbed)
         await activityLogChannel.send(embed = whitelistEmbed)
+
+    @activityCheck.before_loop
+    async def beforeActivityCheck(self):
+
+        await self.bot.wait_until_ready()
+        startTime = next_weekday(datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30, microsecond = 0), 6)
+        print(f"starting auto activity check on {startTime.strftime('%A, %B %d, %Y')} at {startTime.strftime('%I:%M:%S')}")
+        await sleep_until(startTime)
 
 def setup(bot):
 
