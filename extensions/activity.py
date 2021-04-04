@@ -1,19 +1,26 @@
 import discord
 from discord.ext import commands, tasks
+from discord.utils import sleep_until
+
+from checks import messageCheck #pylint: disable = import-error
+from database import activityCollection, memberCollection #pylint: disable = import-error
+from timezones import eastern #pylint: disable = import-error
 
 import asyncio
-from checks import messageCheck #pylint: disable = import-error
 import datetime
-from database import activityCollection, memberCollection #pylint: disable = import-error
-import typing
+import itertools
 import numpy
+import operator
+import os
 import pytz
+import typing
 
 class activity(commands.Cog, name = "Activity"):
 
     def __init__(self, bot):
 
         self.bot = bot
+        self.updateWhitelist.start() #pylint: disable = no-member
 
     @commands.group(aliases = ["inactivity", "act", "inact", "a", "ia"])
     @commands.has_any_role(738915444420903022, 716599787780177954, 730175515809546300)
@@ -29,35 +36,37 @@ class activity(commands.Cog, name = "Activity"):
             check - start a manual inactivity check for all members.
                 usage: o!trial check [dayOffset]
                 aliases: ch, c
-            whitelist - commands for the inactivity whitelist
-                use 'o!help activity whitelist' for more info
         """
 
         if ctx.invoked_subcommand == None:
 
-            activityCommandUsageEmbed = discord.Embed(title = f"Activity Command Usage", description = f"activity [requirements|check]\nrequirements - set the weekly gexp activity requirement for the guild\ncheck - manually start an inactivity check\nwhitelist - commands for the activity whitelist", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
+            activityCommandUsageEmbed = discord.Embed(title = f"Activity Command Usage", description = f"activity [requirements|check]\nrequirements - set the weekly gexp activity requirement for the guild\ncheck - manually start an inactivity check", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
             await ctx.channel.send(embed = activityCommandUsageEmbed)
 
     @activity.command(aliases = ["requirement", "reqs", "req"])
-    async def requirements(self, ctx, amount: typing.Optional[int] = None):
+    async def requirements(self, ctx, amount: typing.Optional[int]):
 
-        try:
+        await ctx.message.delete()
 
-            if amount == None:
+        if amount == None:
 
-                await ctx.channel.send(f"What amount fo gexp do you want to set the weekly requirement to?")
-                amount = int((await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))).content)
-                
-            activityCollection.update_one({"_id": "envision"}, {"$set": {"weeklyReq": amount}})
-            await ctx.channel.send(f"Weekly gexp activity requirement set to {amount}.")
+            try:
 
-        except asyncio.TimeoutError:
+                await ctx.channel.send(f"What amount fo gexp do you want to set the weekly requirement to?", delete_after = 15)
+                amountResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await amount.delete()
+                amount = int(amountResponse.content)
+            
+            except asyncio.TimeoutError:
 
-            await ctx.channel.send(f"Timed Out")
+                await ctx.channel.send(f"Timed Out", delete_after = 15)
 
-        except ValueError:
+            except ValueError:
 
-            await ctx.channel.send(f"Amount must be an integer")
+                await ctx.channel.send(f"Amount must be an integer", delete_after = 15)
+
+        activityCollection.update_one({"_id": "envision"}, {"$set": {"weeklyReq": amount}})
+        await ctx.channel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author.name}")
     
     @activity.command(aliases = ["ch", "c"])
     async def check(self, ctx):
@@ -94,7 +103,15 @@ class activity(commands.Cog, name = "Activity"):
         await ctx.channel.send(embed = passEmbed)
         await ctx.channel.send(embed = failEmbed)
 
+    @activity.error
+    async def activity_error(self, ctx, error):
+
+        if isinstance(error, commands.MissingAnyRole):
+
+            await ctx.channel.send(f"You are missing a required role to use this command!")
+
     @commands.group(aliases = ["white", "wl", "w"])
+    @commands.has_any_role(738915444420903022, 716599787780177954, 730175515809546300)
     async def whitelist(self, ctx):
 
         if ctx.invoked_subcommand == None:
@@ -104,8 +121,6 @@ class activity(commands.Cog, name = "Activity"):
 
     @whitelist.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str] = None):
-
-        eastern = pytz.timezone("US/Eastern")
 
         activityData = await activityCollection.find_one({"_id": "envision"})
         memberData = await memberCollection.find_one({"_id": "envision"})
@@ -128,13 +143,13 @@ class activity(commands.Cog, name = "Activity"):
             await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
             return
 
-        activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
-        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}")
+        activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0).astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
+        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}. Added to whitelist by {ctx.author.name}")
 
     @whitelist.command(aliases = ["rem", "rm", "r"])
     async def remove(self, ctx, username: typing.Optional[str] = None):
 
-        activityData = activityCollection.find_one({"_id": "envision"})
+        activityData = await activityCollection.find_one({"_id": "envision"})
         whitelistedMembers = [member["username"] for member in activityData["whitelist"]]
 
         if username == None:
@@ -156,25 +171,61 @@ class activity(commands.Cog, name = "Activity"):
             return
 
         activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": username}}})
-        await ctx.channel.send(f"Unwhitelisted member {username}")
+        await ctx.channel.send(f"Unwhitelisted member {username}. Unwhitelisted by {ctx.author.name}")
 
     @whitelist.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
 
-        activityData = activityCollection.find_one({"_id": "envision"})
+        eastern = pytz.timezone("US/Eastern")
+
+        activityData = await activityCollection.find_one({"_id": "envision"})
         whitelist = activityData["whitelist"]
 
-        whitelistEmbed = discord.Embed(title = f"⬜ Whitelisted Members ⬜", description = f"Whitelist duration: {activityData['whitelistDuration']}\nWhitelisted Members: {len(whitelist)}", color = discord.Color.lighter_grey(), timestamp = datetime.datetime.utcnow())
+        whitelistEmbed = discord.Embed(title = f"⬜ Whitelisted Members ⬜ {datetime.datetime.now().astimezone(eastern).date().strftime('%A, %B %d, %Y')}", description = f"Whitelist duration: {activityData['whitelistDuration']}\nWhitelisted Members: {len(whitelist)}", color = discord.Color.lighter_grey(), timestamp = datetime.datetime.utcnow())
 
         if len(whitelist) > 0:
-        
-            for chunk in numpy.array_split(whitelist, (len(whitelist) / 22)):
 
-                whitelistEmbed.add_field(name = f"--------------------------------------------------", value = ("```" + "\n".join([f"+ {member['username']} unwhitelisted on {member['unwhitelistedDate'].date().strftime('%m/%d/%Y')}" for member in chunk]) + "```"))
+            for key, chunk in itertools.groupby(sorted(whitelist, key = operator.itemgetter('unwhitelistDate')), key = operator.itemgetter('unwhitelistDate')):
+
+                whitelistEmbed.add_field(name = f"Unwhitelisted on {key.strftime('%m/%d/%Y')} (mm/dd/yyyy)", value = ("```" + "\n".join([f"+ {member['username']}" for member in chunk]) + "```"), inline = False)
 
         else:
 
             whitelist.add_field(name = f"--------------------------------------------------", value = f"```No whitelisted members```")
+
+        await ctx.channel.send(embed = whitelistEmbed)
+
+    @whitelist.error
+    async def whitelist_error(self, ctx, error):
+
+        if isinstance(error, commands.MissingAnyRole):
+
+            await ctx.channel.send(f"You are missing a required role to use this command!")
+
+    @tasks.loop(hours = 24)
+    async def updateWhitelist(self):
+
+        activityData = await activityCollection.find_one({"_id": "envision"})
+        whitelist = activityData["whitelist"]
+
+        now = datetime.datetime.now().astimezone(eastern)
+
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_BOT_CHANNEL")))
+
+        for member in whitelist:
+
+            if member["unwhitelistDate"].date() == now.date():
+
+                await whitelistLogChannel.send(f"Member {member['username']} unwhitelisted. Reached the end of their whitelist time.")
+                activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": member["username"]}}})
+
+    @updateWhitelist.before_loop
+    async def beforeUpdateWhitelist(self):
+
+        await self.bot.wait_until_ready()
+        startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30, microsecond = 0)
+        print(f"starting whitelist update loop on {startTime.strftime('%A, %B %d, %Y')} at {startTime.strftime('%I:%M:%S')}")
+        await sleep_until(startTime)
 
 def setup(bot):
 
