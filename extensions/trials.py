@@ -256,6 +256,66 @@ class trials(commands.Cog, name = "Trial Members"):
 
             await trialDateChannel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author}")
 
+    @trials.command(aliases = ["ext", "e"])
+    async def extend(self, ctx, username: typing.Optional[str], duration: typing.Optional[int]):
+
+        await ctx.message.delete()
+
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+        trialMembers = trialData["trialMembers"]
+
+        trialMemberLogChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_LOG_CHANNEL_ID")))
+
+        if username == None:
+
+            try:
+
+                await ctx.channel.send(f"What member's trial period time do you want to extend?", delete_after = 15)
+                usernameResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await usernameResponse.delete()
+                username = usernameResponse.content.casefold()
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
+
+        username = username.casefold()
+
+        if username not in [member["username"] for member in trialMembers]:
+
+            await ctx.channel.send(f"That member is not on their trial period. You can start their trial period with 'o!trials add {username}'.", delete_after = 15)
+            return
+
+        if duration == None:
+
+            try:
+
+                await ctx.channel.send(f"How many days do you want to extend their trial by?", delete_after = 15)
+                durationResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await durationResponse.delete()
+                duration = int(durationResponse.content)
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
+
+            except ValueError:
+
+                await ctx.channel.send(f"Extension duration must be an integer.", delete_after = 15)
+                return
+
+        currentMemberDate = next(trial["memberDate"] for trial in trialMembers if trial["username"] == username)
+
+        await trialsCollection.update_one({"_id": "envision", "trialMembers.username": username}, {"$set": {"trialMembers.$.memberDate": currentMemberDate + datetime.timedelta(days = duration)}})
+        await ctx.channel.send(f"Member {username}'s trial period time extended by {duration} days. Member on {(currentMemberDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+
+        if ctx.channel != trialMemberLogChannel:
+
+            await trialMemberLogChannel.send(f"Member {username}'s trial period time extended by {duration} days. Member on {(currentMemberDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+
+
     @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
 
