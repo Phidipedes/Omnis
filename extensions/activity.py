@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 from discord.utils import sleep_until
 
 from checks import messageCheck #pylint: disable = import-error
-from database import activityCollection, memberCollection #pylint: disable = import-error
+from database import activityCollection, memberCollection, trialsCollection #pylint: disable = import-error
 from timezones import eastern #pylint: disable = import-error
 
 import asyncio
@@ -43,10 +43,25 @@ class activity(commands.Cog, name = "Activity"):
             activityCommandUsageEmbed = discord.Embed(title = f"Activity Command Usage", description = f"activity [requirements|check]\nrequirements - set the weekly gexp activity requirement for the guild\ncheck - manually start an inactivity check", color = discord.Color.purple(), timestamp = datetime.datetime.utcnow())
             await ctx.channel.send(embed = activityCommandUsageEmbed)
 
-    @activity.command(aliases = ["requirement", "reqs", "req"])
-    async def requirements(self, ctx, amount: typing.Optional[int]):
+    @activity.command(aliases = ["reqs", "req"])
+    async def requirement(self, ctx, amount: typing.Optional[int]):
+
+        """
+        Sets the weekly member gexp requirement
+
+        Parameters:
+            amount (int): the amount of gexp required to pass the inactivity check.
+
+        Usage:
+            o![whitelist|white|wl|w] [requirement|reqs|req] [amount]
+
+        Example:
+            o!w req 120000 >> sets activity requirement to 120,000 gexp
+        """
 
         await ctx.message.delete()
+
+        activityLogChannel = self.bot.get_channel(int(os.getenv("ACTIVITY_LOG_CHANNEL_ID")))
 
         if amount == None:
 
@@ -60,29 +75,59 @@ class activity(commands.Cog, name = "Activity"):
             except asyncio.TimeoutError:
 
                 await ctx.channel.send(f"Timed Out", delete_after = 15)
+                return
 
             except ValueError:
 
                 await ctx.channel.send(f"Amount must be an integer", delete_after = 15)
+                return
 
         activityCollection.update_one({"_id": "envision"}, {"$set": {"weeklyReq": amount}})
-        await ctx.channel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author.name}")
+        await ctx.channel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author}")
+
+        if ctx.channel != activityLogChannel:
+
+            await activityLogChannel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author}")
     
     @activity.command(aliases = ["ch", "c"])
     async def check(self, ctx):
 
-        activityReq = (await activityCollection.find_one({"_id": "envision"}))["weeklyReq"]
-        members = (await memberCollection.find_one({"_id": "envision"}))["members"].values()
+        """
+        Starts a manual inactivity check
 
-        passList = [f"+ {member['username']} --- earned {member['gexp']['total']}" for member in members if member["gexp"]["total"] >= activityReq]
-        failList = [f"+ {member['username']} --- missing {activityReq - member['gexp']['total']}" for member in members if member["gexp"]["total"] < activityReq]
+        Parameters:
+            none
+
+        Usage:
+            o![inactivity|activity|ia|a] [check|ch|c]
+
+        Example:
+            o!a check >> shows which members are passing the inactivity check
+        """
+
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+        trialMembers = [member["username"] for member in trialData["trialMembers"]]
+        activityData = await activityCollection.find_one({"_id": "envision"})
+        activityReq = activityData["weeklyReq"]
+        whitelist = [member["username"] for member in activityData["whitelist"]]
+        memberData = await memberCollection.find_one({"_id": "envision"})
+        members = [member for member in memberData["members"].values() if member["username"] not in trialMembers]
 
         passEmbed = discord.Embed(title = f"Active Members", description = f"Members who have earned at least {activityReq} gexp in the past 7 days:", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
         failEmbed = discord.Embed(title = f"Inactive Members", description = f"Members who have not earned at least {activityReq} gexp in the past 7 days:", color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        whitelistEmbed = discord.Embed(title = f"Whitelisted Members", description = f"Members who are excused from activity checks.", color = discord.Color.lighter_grey(), timestamp = datetime.datetime.utcnow())
+
+        passList = [f"+ {member['username']} --- earned {member['gexp']['total']}" for member in members if (member["gexp"]["total"] >= activityReq and member['username'] not in whitelist)]
+        failList = [f"+ {member['username']} --- missing {activityReq - member['gexp']['total']}" for member in members if (member["gexp"]["total"] < activityReq and member['username'] not in whitelist)]
+        whitelistedList = [f"+ {member['username']} --- earned {member['gexp']['total']}" for member in members if member["username"] in whitelist]
 
         if len(passList) > 0:
         
             for chunk in numpy.array_split(passList, 5):
+
+                if len(list(chunk)) == 0:
+
+                    continue
 
                 passEmbed.add_field(name = f"--------------------------------------", value = "```" + "\n".join(list(chunk)) + "```", inline = False)
 
@@ -94,14 +139,33 @@ class activity(commands.Cog, name = "Activity"):
         
             for chunk in numpy.array_split(failList, 5):
 
+                if len(list(chunk)) == 0:
+
+                    continue
+
                 failEmbed.add_field(name = f"--------------------------------------", value = "```" + "\n".join(list(chunk)) + "```", inline = False)
 
         else:
 
             failEmbed.add_field(name = f"-------------------------------------", value = "```No inactive members```")
 
+        if len(whitelistedList) > 0:
+
+            for chunk in numpy.array_split(whitelistedList, 5):
+
+                if len(list(chunk)) == 0:
+
+                    continue
+
+                whitelistEmbed.add_field(name = f"-------------------------------------", value = "```" + "\n".join(list(chunk)) + "```")
+
+        else:
+
+            whitelistEmbed.add_field(name = f"-------------------------------------", value = "```No whitelisted members```")
+
         await ctx.channel.send(embed = passEmbed)
         await ctx.channel.send(embed = failEmbed)
+        await ctx.channel.send(embed = whitelistEmbed)
 
     @activity.error
     async def activity_error(self, ctx, error):
@@ -117,6 +181,27 @@ class activity(commands.Cog, name = "Activity"):
     @commands.group(aliases = ["white", "wl", "w"])
     @commands.has_any_role(738915444420903022, 716599787780177954, 730175515809546300)
     async def whitelist(self, ctx):
+
+        """
+        Whitelist commands
+
+        Commands:
+            duration - set the whitelist duration
+                usage: o!whitelist duration [duration]
+                aliases: dura, dur
+            add - add member to the whitelist
+                usage: o!whitelist add [username]
+                aliases: a
+            remove - remove member from the whitelist
+                usage: o!whitelist remove [username]
+                aliases: ch, c
+            list - list all the current whitelisted members
+                usage: o!whitelist list
+                aliases: li, l
+            extend - extend the whitelist time of the given member
+                usage: o!whitelist extend [duration]
+                aliases: ext, e
+        """
 
         if ctx.invoked_subcommand == None:
 
@@ -333,6 +418,86 @@ class activity(commands.Cog, name = "Activity"):
         startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30, microsecond = 0)
         print(f"starting whitelist update loop on {startTime.strftime('%A, %B %d, %Y')} at {startTime.strftime('%I:%M:%S')}")
         await sleep_until(startTime)
+
+    @tasks.loop(hours = 7*24)
+    async def activityCheck(self):
+
+        """
+        Starts a manual inactivity check
+
+        Parameters:
+            none
+
+        Usage:
+            o![inactivity|activity|ia|a] [check|ch|c]
+
+        Example:
+            o!a check >> shows which members are passing the inactivity check
+        """
+
+        activityLogChannel = self.bot.get_channel(int(os.getenv("ACTIVITY_LOG_CHANNEL_ID")))
+
+        trialData = await trialsCollection.find_one({"_id": "envision"})
+        trialMembers = [member["username"] for member in trialData["trialMembers"]]
+        activityData = await activityCollection.find_one({"_id": "envision"})
+        activityReq = activityData["weeklyReq"]
+        whitelist = [member["username"] for member in activityData["whitelist"]]
+        memberData = await memberCollection.find_one({"_id": "envision"})
+        members = [member for member in memberData["members"].values() if member["username"] not in trialMembers]
+
+        passEmbed = discord.Embed(title = f"Active Members", description = f"Members who have earned at least {activityReq} gexp in the past 7 days:", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        failEmbed = discord.Embed(title = f"Inactive Members", description = f"Members who have not earned at least {activityReq} gexp in the past 7 days:", color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
+        whitelistEmbed = discord.Embed(title = f"Whitelisted Members", description = f"Members who are excused from activity checks.", color = discord.Color.lighter_grey(), timestamp = datetime.datetime.utcnow())
+
+        passList = [f"+ {member['username']} --- earned {member['gexp']['total']}" for member in members if (member["gexp"]["total"] >= activityReq and member['username'] not in whitelist)]
+        failList = [f"+ {member['username']} --- missing {activityReq - member['gexp']['total']}" for member in members if (member["gexp"]["total"] < activityReq and member['username'] not in whitelist)]
+        whitelistedList = [f"+ {member['username']} --- earned {member['gexp']['total']}" for member in members if member["username"] in whitelist]
+
+        if len(passList) > 0:
+        
+            for chunk in numpy.array_split(passList, 5):
+
+                if len(list(chunk)) == 0:
+
+                    continue
+
+                passEmbed.add_field(name = f"--------------------------------------", value = "```" + "\n".join(list(chunk)) + "```", inline = False)
+
+        else:
+
+            passEmbed.add_field(name = f"-------------------------------------", value = "```No active members```")
+
+        if len(failList) > 0:
+        
+            for chunk in numpy.array_split(failList, 5):
+
+                if len(list(chunk)) == 0:
+
+                    continue
+
+                failEmbed.add_field(name = f"--------------------------------------", value = "```" + "\n".join(list(chunk)) + "```", inline = False)
+
+        else:
+
+            failEmbed.add_field(name = f"-------------------------------------", value = "```No inactive members```")
+
+        if len(whitelistedList) > 0:
+
+            for chunk in numpy.array_split(whitelistedList, 5):
+
+                if len(list(chunk)) == 0:
+
+                    continue
+
+                whitelistEmbed.add_field(name = f"-------------------------------------", value = "```" + "\n".join(list(chunk)) + "```")
+
+        else:
+
+            whitelistEmbed.add_field(name = f"-------------------------------------", value = "```No whitelisted members```")
+
+        await activityLogChannel.send(embed = passEmbed)
+        await activityLogChannel.send(embed = failEmbed)
+        await activityLogChannel.send(embed = whitelistEmbed)
 
 def setup(bot):
 
