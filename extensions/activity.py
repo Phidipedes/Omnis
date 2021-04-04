@@ -496,7 +496,13 @@ class activity(commands.Cog, name = "Activity"):
     async def beforeActivityCheck(self):
 
         await self.bot.wait_until_ready()
-        startTime = next_weekday(datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30, microsecond = 0), 6)
+        startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30, microsecond = 0)
+
+        #if it is not sunday, set the start time to the next sunday
+        if not datetime.datetime.now().weekday() == 6:
+
+            startTime = next_weekday(startTime, 6)
+
         print(f"starting auto activity check on {startTime.strftime('%A, %B %d, %Y')} at {startTime.strftime('%I:%M:%S')}")
         await sleep_until(startTime)
 
