@@ -422,13 +422,9 @@ class trials(commands.Cog, name = "Trial Members"):
     @checkTrialMembers.before_loop
     async def beforeCheckLoop(self):
 
-        startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30)
-
-        print(f"{(startTime - datetime.datetime.now().astimezone(eastern)).total_seconds()} seconds until loop starts on {startTime.strftime('%A, %B %d, %Y')}")
-
-        print(startTime)
-
         await self.bot.wait_until_ready()
+        startTime = datetime.datetime.now().astimezone(eastern).replace(hour = 23, minute = 59, second = 30)
+        print(f"Starting member update loop on {startTime.strftime('%A, %B %d, %Y')} at {startTime.strftime('%I:%M:%S')}")
         await utils.sleep_until(startTime)
 
 def setup(bot):
