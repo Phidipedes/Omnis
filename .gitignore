@@ -1,6 +1,0 @@
-.vscode
-Pipfile
-Pipfile.lock
-.env
-.venv
-extensions/__pycache__
