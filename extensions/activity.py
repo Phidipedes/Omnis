@@ -119,8 +119,103 @@ class activity(commands.Cog, name = "Activity"):
             whitelistCommandUsageEmbed = discord.Embed(title = f"Whitelist Command Usage", description = f"whitelist [add|remove|list]\nadd - add a member to the whitelist\nremove - remove a member from the whitelist\nlist - list every member that is on the whitelist")
             await ctx.channel.send(embed = whitelistCommandUsageEmbed)
 
+    @whitelist.command()
+    async def duration(self, ctx, duration: typing.Optional[int]):
+
+        await ctx.message.delete()
+
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_LOG_CHANNEL_ID")))
+
+        if duration == None:
+
+            try:
+
+                await ctx.channel.send(f"How long do you want to set the whitelist time to be?", delete_after = 15)
+                durationResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await durationResponse.delete()
+                duration = int(durationResponse.content)
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
+            
+            except ValueError:
+
+                await ctx.channel.send(f"The duration must be an integer.", delete_after = 15)
+                return
+
+            activityCollection.update_one({"_id": "envision"}, {"$set": {"whitelistDuration": duration}})
+
+            await ctx.channel.send(f"Whitelist duration set to {duration} days by {ctx.author.name}")
+
+            if ctx.channel != whitelistLogChannel:
+
+                await whitelistLogChannel.send(f"Whitelist duration set to {duration} days by {ctx.author.name}")
+
+    @whitelist.command()
+    async def extend(self, ctx, username: typing.Optional[str], duration: typing.Optional[int]):
+
+        await ctx.message.delete()
+
+        activityData = await activityCollection.find_one({"_id": "envision"})
+        whitelist = activityData["whitelist"]
+
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_LOG_CHANNEL_ID")))
+
+        if username == None:
+
+            try:
+
+                await ctx.channel.send(f"What member's whitelist time do you want to extend?", delete_after = 15)
+                usernameResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await usernameResponse.delete()
+                username = usernameResponse.content.casefold()
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
+
+        username = username.casefold()
+
+        if username not in [member["username"] for member in whitelist]:
+
+            await ctx.channel.send(f"That member is not on the whitelist. You can add them to the whitelist with 'o!whitelist add {username}'.", delete_after = 15)
+            return
+
+        if duration == None:
+
+            try:
+
+                await ctx.channel.send(f"How many days do you want to extend their whitelist by?", delete_after = 15)
+                durationResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
+                await durationResponse.delete()
+                duration = int(durationResponse.content)
+
+            except asyncio.TimeoutError:
+
+                await ctx.channel.send(f"Timed out", delete_after = 15)
+                return
+
+            except ValueError:
+
+                await ctx.channel.send(f"Extension duration must be an integer.", delete_after = 15)
+                return
+
+        currentUnwhitelistDate = next(member["unwhitelistDate"] for member in whitelist if member["username"] == username)
+
+        await activityCollection.update_one({"_id": "envision", "whitelist.username": username}, {"$set": {"whitelist.$.unwhitelistDate": currentUnwhitelistDate + datetime.timedelta(days = duration)}})
+        await ctx.channel.send(f"Member {username}'s whitelist time extended by {duration} days. Unwhitelisted on {(currentUnwhitelistDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+
+        if ctx.channel != whitelistLogChannel:
+
+            await whitelistLogChannel.send(f"Member {username}'s whitelist time extended by {duration} days. Unwhitelisted on {(currentUnwhitelistDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+
     @whitelist.command(aliases = ["a"])
-    async def add(self, ctx, username: typing.Optional[str] = None):
+    async def add(self, ctx, username: typing.Optional[str]):
+
+        await ctx.message.delete()
 
         activityData = await activityCollection.find_one({"_id": "envision"})
         memberData = await memberCollection.find_one({"_id": "envision"})
@@ -147,7 +242,9 @@ class activity(commands.Cog, name = "Activity"):
         await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}. Added to whitelist by {ctx.author.name}")
 
     @whitelist.command(aliases = ["rem", "rm", "r"])
-    async def remove(self, ctx, username: typing.Optional[str] = None):
+    async def remove(self, ctx, username: typing.Optional[str]):
+
+        await ctx.message.delete()
 
         activityData = await activityCollection.find_one({"_id": "envision"})
         whitelistedMembers = [member["username"] for member in activityData["whitelist"]]
@@ -175,6 +272,8 @@ class activity(commands.Cog, name = "Activity"):
 
     @whitelist.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
+
+        await ctx.message.delete()
 
         eastern = pytz.timezone("US/Eastern")
 
@@ -210,7 +309,7 @@ class activity(commands.Cog, name = "Activity"):
 
         now = datetime.datetime.now().astimezone(eastern)
 
-        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_BOT_CHANNEL")))
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_LOG_CHANNEL_ID")))
 
         for member in whitelist:
 
