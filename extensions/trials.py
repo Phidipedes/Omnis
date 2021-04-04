@@ -94,11 +94,11 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialReq": amount}})
-        await ctx.channel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author.name}")
+        await ctx.channel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author.name}")
+            await trialDateChannel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author}")
 
     @trials.command(aliases = ["dura", "dur"])
     async def duration(self, ctx, duration: typing.Optional[int]):
@@ -141,11 +141,11 @@ class trials(commands.Cog, name = "Trial Members"):
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
 
-        await ctx.channel.send(f"Trial period duration set to {duration} days by {ctx.author.name}")
+        await ctx.channel.send(f"Trial period duration set to {duration} days by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Trial period duration set to {duration} days by {ctx.author.name}")
+            await trialDateChannel.send(f"Trial period duration set to {duration} days by {ctx.author}")
 
     @trials.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str]):
@@ -199,11 +199,11 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": (datetime.datetime.now().astimezone(eastern) + datetime.timedelta(trialDuration)).replace(hour = 0, minute = 0, second = 0, microsecond= 0)}}})
-        await ctx.channel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date()}. (Member on {datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)}). Added by {ctx.author.name}")
+        await ctx.channel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date()}. (Member on {datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)}). Added by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')}) Added by {ctx.author.name}")
+            await trialDateChannel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')}) Added by {ctx.author}")
 
     @trials.command(aliases = ["rem", "r"])
     async def remove(self, ctx, username: typing.Optional[str]):
@@ -250,11 +250,11 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": username}}})
-        await ctx.channel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author.name}")
+        await ctx.channel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author.name}")
+            await trialDateChannel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author}")
 
     @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
