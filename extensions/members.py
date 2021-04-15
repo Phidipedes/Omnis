@@ -7,7 +7,7 @@ import requests
 import datetime
 import os
 
-from database import memberCollection, trialsCollection #pylint: disable = import-error
+from database import memberCollection, trialsCollection, activityCollection #pylint: disable = import-error
 
 class members(commands.Cog, name = "Member Updates"):
 
@@ -24,7 +24,9 @@ class members(commands.Cog, name = "Member Updates"):
         hypixelData = requests.get(f"https://api.hypixel.net/guild?key={os.getenv('HYPIXEL_API_KEY')}&name=envision").json()
         cachedData = await memberCollection.find_one({"_id": "envision"})
         trialData = await trialsCollection.find_one({"_id": "envision"})
+        activityData = await activityCollection.find_one({"_id": "envision"})
         trialMembersList = [trial["username"] for trial in trialData["trialMembers"]]
+        whitelistedMembersList = [wlmember["username"] for wlmember in activityData["whitelist"]]
 
         for member in hypixelData["guild"]["members"]:
 
@@ -57,7 +59,11 @@ class members(commands.Cog, name = "Member Updates"):
 
                         if cachedUsername in trialMembersList:
 
-                            trialsCollection.update_one({"_id": "envision", "trialMembers.username": cachedUsername}, {"$set": {"trialMembers.$.username": currentUsername}})
+                            await trialsCollection.update_one({"_id": "envision", "trialMembers.username": cachedUsername}, {"$set": {"trialMembers.$.username": currentUsername}})
+
+                        if cachedUsername in whitelistedMembersList:
+
+                            await activityData.update_one({"_id": "envision", "whitelist.username": cachedUsername}, {"$set": {"whitelist.$.username": currentUsername}})
 
                     if cachedRank != currentRank:
 
@@ -71,7 +77,7 @@ class members(commands.Cog, name = "Member Updates"):
 
                 me = self.bot.get_user(693132768510607400)
 
-                me.send(f"Check log. SOmethign went wrong")
+                me.send(f"Check log. Somethign went wrong")
 
                 print(f"Something went wrong with the following data:\nHypixel Data:\n{member}")
                 print(f"Mojang Data:\n{mojangData}")
@@ -79,28 +85,13 @@ class members(commands.Cog, name = "Member Updates"):
 
                 continue
 
-        uuidsLeft = []
-
         for uuid in cachedData["members"].keys():
 
             if uuid not in [member["uuid"] for member in hypixelData["guild"]["members"]]:
 
-                uuidsLeft.append(uuid)
-
-        for uuid in uuidsLeft:
-
-            removed = cachedData["members"].pop(uuid)
-
-            memberLeftEmbed = discord.Embed(title = f"Member Left", description = f"UUID: {uuid}\nUsername: {removed['username']}\nRank: {removed['rank']}", color = discord.Color.red(), timestamp = datetime.datetime.utcnow())
-            await memberLogChannel.send(embed = memberLeftEmbed)
-
-            if cachedUsername in trialMembersList:
-
-                trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": removed['username']}}})
-
-        if len(uuidsLeft) > 0:
-
-            await memberCollection.update_one({"_id": "envision"}, {"$set": {"members": cachedData["members"]}})
+                await memberCollection.update_one({"_id": "envision"}, {"$pull": {"members": {"username": cachedData["members"][uuid]["username"]}}})
+                await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": cachedData["members"][uuid]["username"]}}})
+                await activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": cachedData["members"][uuid]["username"]}}})
 
     @updateMembers.before_loop
     async def beforeUpdateMembers(self):
