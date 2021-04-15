@@ -159,7 +159,7 @@ class activity(commands.Cog, name = "Activity"):
 
                     continue
 
-                whitelistEmbed.add_field(name = f"-------------------------------------", value = "```" + "\n".join(list(chunk)) + "```")
+                whitelistEmbed.add_field(name = f"-------------------------------------", value = "```" + "\n".join(list(chunk)) + "```", inline = False)
 
         else:
 
