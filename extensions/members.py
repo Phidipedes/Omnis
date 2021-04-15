@@ -89,7 +89,7 @@ class members(commands.Cog, name = "Member Updates"):
 
             if uuid not in [member["uuid"] for member in hypixelData["guild"]["members"]]:
 
-                await memberCollection.update_one({"_id": "envision", "members.username": cachedData["members"][uuid]["username"]}, {"$unset": "members.$"})
+                await memberCollection.update_one({"_id": "envision"}, {"$unset": f"members.{uuid}"})
                 await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": cachedData["members"][uuid]["username"]}}})
                 await activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": cachedData["members"][uuid]["username"]}}})
 
