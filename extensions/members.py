@@ -93,7 +93,7 @@ class members(commands.Cog, name = "Member Updates"):
                 await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": cachedData["members"][uuid]["username"]}}})
                 await activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": cachedData["members"][uuid]["username"]}}})
 
-                memberLeaveEmbed = discord.Embed(title = f"Member Left", description = f"UUID: {uuid}\nUsername: {currentUsername}\nRank: {currentRank}", color = discord.Color.dark_red(), timestamp = datetime.datetime.utcnow())
+                memberLeaveEmbed = discord.Embed(title = f"Member Left", description = f"UUID: {uuid}\nUsername: {cachedData['members'][uuid]['username']}\nRank: {currentRank}", color = discord.Color.dark_red(), timestamp = datetime.datetime.utcnow())
 
                 await memberLogChannel.send(embed = memberLeaveEmbed)
 
