@@ -199,11 +199,13 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": (datetime.datetime.now().astimezone(eastern) + datetime.timedelta(trialDuration)).replace(hour = 0, minute = 0, second = 0, microsecond= 0)}}})
-        await ctx.channel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date()}. (Member on {datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)}). Added by {ctx.author}")
-
+        memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
+        newTrialEmbed = discord.Embed(title = f"{username} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: {ctx.author}.", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
+        ctx.channel.send(embed = newTrialEmbed)
+        
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Member {username} starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}. (Member on {(datetime.datetime.now().astimezone(eastern).date() + datetime.timedelta(trialDuration)).strftime('%m/%d/%Y')}) Added by {ctx.author}")
+            await trialDateChannel.send(embed = newTrialEmbed)
 
     @trials.command(aliases = ["rem", "r"])
     async def remove(self, ctx, username: typing.Optional[str]):
@@ -250,11 +252,12 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": username}}})
-        await ctx.channel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author}")
+        removeTrialEmbed = discord.Embed(title = f"{username} Removed from Trial", description = f"Removed by {ctx.author}", color = discord.Color.dark_red())
+        await ctx.channel.send(embed = removeTrialEmbed)
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Removed {username.casefold()} from the trial members list. Removed by {ctx.author}")
+            await trialDateChannel.send(embed = removeTrialEmbed)
 
     @trials.command(aliases = ["ext", "e"])
     async def extend(self, ctx, username: typing.Optional[str], duration: typing.Optional[int]):
@@ -306,14 +309,15 @@ class trials(commands.Cog, name = "Trial Members"):
                 await ctx.channel.send(f"Extension duration must be an integer.", delete_after = 15)
                 return
 
-        currentMemberDate = next(trial["memberDate"] for trial in trialMembers if trial["username"] == username)
+        memberDate = next(trial["memberDate"] for trial in trialMembers if trial["username"] == username) + datetime.timedelta(days = duration)
 
-        await trialsCollection.update_one({"_id": "envision", "trialMembers.username": username}, {"$set": {"trialMembers.$.memberDate": currentMemberDate + datetime.timedelta(days = duration)}})
-        await ctx.channel.send(f"Member {username}'s trial period time extended by {duration} days. Member on {(currentMemberDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+        await trialsCollection.update_one({"_id": "envision", "trialMembers.username": username}, {"$set": {"trialMembers.$.memberDate": memberDate}})
+        extendTrialEmbed = discord.Embed(title = f"{username} Trial Extended", description = f"Extended by {duration} days.\nMember on {memberDate}.\nExtended by {ctx.author}")
+        await ctx.channel.send(embed = extendTrialEmbed)
 
         if ctx.channel != trialMemberLogChannel:
 
-            await trialMemberLogChannel.send(f"Member {username}'s trial period time extended by {duration} days. Member on {(currentMemberDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+            await trialMemberLogChannel.send(embed = extendTrialEmbed)
 
 
     @trials.command(aliases = ["list", "li", "l"])
