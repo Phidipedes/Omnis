@@ -84,7 +84,7 @@ class members(commands.Cog, name = "Member Updates"):
 
                 me = self.bot.get_user(693132768510607400)
 
-                me.send(f"Check log. Somethign went wrong")
+                await me.send(f"Check log. Somethign went wrong")
 
                 print(f"Something went wrong with the following data:\nHypixel Data:\n{member}")
                 print(f"Mojang Data:\n{mojangData}")
