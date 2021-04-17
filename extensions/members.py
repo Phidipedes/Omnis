@@ -50,7 +50,7 @@ class members(commands.Cog, name = "Member Updates"):
                     memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
 
                     await trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": currentUsername, "memberDate": memberDate}}})
-                    newTrialEmbed = discord.Embed(title = f"{currentUsername} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: Omnis#7009 (auto added on member join).", color = discord.Color.dark_blue(), timestamp = datetime.datetime.utcnow())
+                    newTrialEmbed = discord.Embed(title = f"{currentUsername} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: Omnis#7009 (auto added on member join).", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
                     trialDateChannel.send(embed = newTrialEmbed)
 
                 else:
