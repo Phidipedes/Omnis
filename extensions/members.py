@@ -51,7 +51,7 @@ class members(commands.Cog, name = "Member Updates"):
 
                     await trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": currentUsername, "memberDate": memberDate}}})
                     newTrialEmbed = discord.Embed(title = f"{currentUsername} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: Omnis#7009 (auto added on member join).", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-                    trialDateChannel.send(embed = newTrialEmbed)
+                    await trialDateChannel.send(embed = newTrialEmbed)
 
                 else:
 
