@@ -201,7 +201,7 @@ class trials(commands.Cog, name = "Trial Members"):
         trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": (datetime.datetime.now().astimezone(eastern) + datetime.timedelta(trialDuration)).replace(hour = 0, minute = 0, second = 0, microsecond= 0)}}})
         memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
         newTrialEmbed = discord.Embed(title = f"{username} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: {ctx.author}.", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        ctx.channel.send(embed = newTrialEmbed)
+        await ctx.channel.send(embed = newTrialEmbed)
         
         if ctx.channel != trialDateChannel:
 
@@ -318,7 +318,6 @@ class trials(commands.Cog, name = "Trial Members"):
         if ctx.channel != trialMemberLogChannel:
 
             await trialMemberLogChannel.send(embed = extendTrialEmbed)
-
 
     @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
