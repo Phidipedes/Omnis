@@ -8,6 +8,7 @@ import datetime
 import os
 
 from database import memberCollection, trialsCollection, activityCollection #pylint: disable = import-error
+from timezones import eastern #pylint: disable = import-error
 
 class members(commands.Cog, name = "Member Updates"):
 
@@ -20,6 +21,7 @@ class members(commands.Cog, name = "Member Updates"):
     async def updateMembers(self):
 
         memberLogChannel = self.bot.get_channel(int(os.getenv("MEMBER_LOG_CHANNEL_ID")))
+        trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
         hypixelData = requests.get(f"https://api.hypixel.net/guild?key={os.getenv('HYPIXEL_API_KEY')}&name=envision").json()
         cachedData = await memberCollection.find_one({"_id": "envision"})
@@ -42,9 +44,14 @@ class members(commands.Cog, name = "Member Updates"):
                 if member["uuid"] not in cachedData["members"].keys():
 
                     await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
-
                     memberJoinEmbed = discord.Embed(title = f"Member Joined", description = f"UUID: {member['uuid']}\nIGN: {currentUsername}\nJoined at:{member['joined']}", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
                     await memberLogChannel.send(embed = memberJoinEmbed)
+
+                    memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
+
+                    await trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": currentUsername, "memberDate": memberDate}}})
+                    newTrialEmbed = discord.Embed(title = f"{currentUsername} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: Omnis#7009 (auto added on member join).", color = discord.Color.dark_blue(), timestamp = datetime.datetime.utcnow())
+                    trialDateChannel.send(embed = newTrialEmbed)
 
                 else:
 
