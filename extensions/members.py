@@ -44,14 +44,12 @@ class members(commands.Cog, name = "Member Updates"):
                 if member["uuid"] not in cachedData["members"].keys():
 
                     await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}": {"username": currentUsername, "rank": member["rank"], "joined": member["joined"], "gexp": member["expHistory"], }}})
-                    memberJoinEmbed = discord.Embed(title = f"Member Joined", description = f"UUID: {member['uuid']}\nIGN: {currentUsername}\nJoined at:{member['joined']}", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-                    await memberLogChannel.send(embed = memberJoinEmbed)
+                    await memberLogChannel.send(f"<:join:835598873678315550> **{currentUsername}** joined the guild. **|** UUID: {member['uuid']}")
 
                     memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
 
                     await trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": currentUsername, "memberDate": memberDate}}})
-                    newTrialEmbed = discord.Embed(title = f"{currentUsername} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: Omnis#7009 (auto added on member join).", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-                    await trialDateChannel.send(embed = newTrialEmbed)
+                    await trialDateChannel.send(f"<:added:835599921113202688> **{currentUsername}** added to trial members on **{datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}** (Member on **{memberDate.date().strftime('%d/%m/%Y')}**) **|** Added automatically on member join")
 
                 else:
 
@@ -61,8 +59,7 @@ class members(commands.Cog, name = "Member Updates"):
                     if cachedUsername!= currentUsername:
 
                         await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.username": currentUsername}})
-                        memberUsernameChangeEmbed = discord.Embed(title = f"Member Username Changed", description = f"UUID:{member['uuid']}\n{cachedUsername} **-->** {currentUsername}\nRank: {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
-                        await memberLogChannel.send(embed = memberUsernameChangeEmbed)
+                        await memberLogChannel.send(f"<:update:835597734177538078> **{cachedUsername}** username changed **|** {cachedUsername} -> **{currentUsername}** **|** UUID: {member['uuid']} **|** Rank: {currentRank}")
 
                         if cachedUsername in trialMembersList:
 
@@ -75,8 +72,7 @@ class members(commands.Cog, name = "Member Updates"):
                     if cachedRank != currentRank:
 
                         await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.rank": currentRank}})
-                        memberRankChangeEmbed = discord.Embed(title = f"Member Rank Changed", description = f"UUID: {member['uuid']}\nUsername:{currentUsername}\n{cachedRank} **-->** {currentRank}", color = discord.Color.blue(), timestamp = datetime.datetime.utcnow())
-                        await memberLogChannel.send(embed = memberRankChangeEmbed)
+                        await memberLogChannel.send(f"<:update:835597734177538078> **{currentUsername}** rank changed **|** {cachedRank} -> **{currentRank}** **|** UUID: {member['uuid']}")
 
                 await memberCollection.update_one({"_id": "envision"}, {"$set": {f"members.{member['uuid']}.gexp": member["expHistory"]}})
 
@@ -94,15 +90,22 @@ class members(commands.Cog, name = "Member Updates"):
 
         for uuid in cachedData["members"].keys():
 
+            username = cachedData["members"][uuid]["username"]
+
             if uuid not in [member["uuid"] for member in hypixelData["guild"]["members"]]:
 
                 await memberCollection.update_one({"_id": "envision"}, {"$unset": {f"members.{uuid}": ""}})
-                await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": cachedData["members"][uuid]["username"]}}})
-                await activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": cachedData["members"][uuid]["username"]}}})
 
-                memberLeaveEmbed = discord.Embed(title = f"Member Left", description = f"UUID: {uuid}\nUsername: {cachedData['members'][uuid]['username']}\nRank: {cachedData['members'][uuid]['rank']}", color = discord.Color.dark_red(), timestamp = datetime.datetime.utcnow())
+                if username in trialMembersList:
 
-                await memberLogChannel.send(embed = memberLeaveEmbed)
+                    await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": username}}})
+                    await trialDateChannel.send(f"<:removed:835599920860758037> **{username}** removed from trial members **|** Removed automatically on member leave")
+
+                if username in whitelistedMembersList:
+
+                    await activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": username}}})
+
+                await memberLogChannel.send(f"<:leave:835598873707282442> **{username}** left the guild **|** UUID: {member['uuid']} **|** Rank: {cachedData['members'][uuid]['rank']}")
 
     @updateMembers.before_loop
     async def beforeUpdateMembers(self):
