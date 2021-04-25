@@ -94,11 +94,11 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialReq": amount}})
-        await ctx.channel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author}")
+        await ctx.channel.send(f"<:exp:835707034611220541> Trial gexp requirement set to **{amount}** by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Trial gexp requirement set to {amount} by {ctx.message.author}")
+            await trialDateChannel.send(f"<:exp:835707034611220541> Trial gexp requirement set to **{amount}** by {ctx.author}")
 
     @trials.command(aliases = ["dura", "dur"])
     async def duration(self, ctx, duration: typing.Optional[int]):
@@ -141,11 +141,11 @@ class trials(commands.Cog, name = "Trial Members"):
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
 
-        await ctx.channel.send(f"⏲️ Trial duration set to {duration} days by {ctx.author}")
+        await ctx.channel.send(f"🕐 Trial duration set to **{duration}** days by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"⏲️ Trial duration set to {duration} days by {ctx.author}")
+            await trialDateChannel.send(f"🕐 Trial duration set to **{duration}** days by {ctx.author}")
 
     @trials.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str]):
@@ -310,7 +310,7 @@ class trials(commands.Cog, name = "Trial Members"):
         memberDate = next(trial["memberDate"] for trial in trialMembers if trial["username"] == username) + datetime.timedelta(days = duration)
 
         await trialsCollection.update_one({"_id": "envision", "trialMembers.username": username}, {"$set": {"trialMembers.$.memberDate": memberDate}})
-        await ctx.channel.send(f"<:extend:835734028497321984> **{username}** trial period extended by **{duration}** days **|** Member on {memberDate.strftime('%m/%d/%Y')} (mm/dd/yy) **|** Extended by by {ctx.author}")
+        await ctx.channel.send(f"<:extend:835734028497321984> **{username}** trial period extended by **{duration}** days **|** Member on **{memberDate.strftime('%m/%d/%Y')}** (mm/dd/yy) **|** Extended by by {ctx.author}")
 
         if ctx.channel != trialMemberLogChannel:
 

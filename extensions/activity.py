@@ -85,11 +85,11 @@ class activity(commands.Cog, name = "Activity"):
                 return
 
         activityCollection.update_one({"_id": "envision"}, {"$set": {"weeklyReq": amount}})
-        await ctx.channel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author}")
+        await ctx.channel.send(f"<:exp:835707034611220541> Weekly gexp requirement set to **{amount}** by {ctx.author}")
 
         if ctx.channel != activityLogChannel:
 
-            await activityLogChannel.send(f"Weekly gexp activity requirement set to {amount} by {ctx.author}")
+            await activityLogChannel.send(f"<:exp:835707034611220541> Trial gexp requirement set to **{amount}** by {ctx.author}")
     
     @activity.command(aliases = ["ch", "c"])
     async def check(self, ctx):
@@ -238,16 +238,18 @@ class activity(commands.Cog, name = "Activity"):
 
             activityCollection.update_one({"_id": "envision"}, {"$set": {"whitelistDuration": duration}})
 
-            await ctx.channel.send(f"Whitelist duration set to {duration} days by {ctx.author.name}")
+        await ctx.channel.send(f"🕐 Whitelist duration set to **{duration}** days by {ctx.author}")
 
-            if ctx.channel != whitelistLogChannel:
+        if ctx.channel != whitelistLogChannel:
 
-                await whitelistLogChannel.send(f"Whitelist duration set to {duration} days by {ctx.author.name}")
+            await whitelistLogChannel.send(f"🕐 Whitelist duration set to **{duration}** days by {ctx.author}")
 
     @whitelist.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str]):
 
         await ctx.message.delete()
+
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_LOG_CHANNEL_ID")))
 
         activityData = await activityCollection.find_one({"_id": "envision"})
         memberData = await memberCollection.find_one({"_id": "envision"})
@@ -267,16 +269,24 @@ class activity(commands.Cog, name = "Activity"):
 
         if username not in [member["username"] for member in memberData["members"].values()]:
 
-            await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? I fyou are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
+            await ctx.channel.send(f"That member is not in the guild. Are you sure you spelled their name correctly? If you are sure you spelled their name correctly and that they are in the guild, wait a few minutes and try again. The cache updates every 5 minutes.")
             return
 
-        activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": datetime.datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0).astimezone(eastern) + datetime.timedelta(days = activityData["whitelistDuration"])}}})
-        await ctx.channel.send(f"Member {username} whitlisted on {datetime.datetime.now().astimezone(eastern).strftime('%A, %B %d, %Y')}. Unwhitelisted on {(datetime.datetime.now().astimezone(eastern) + datetime.timedelta(days = activityData['whitelistDuration'])).strftime('%A, %B %d, %Y')}. Added to whitelist by {ctx.author.name}")
+        unwhitelistDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = activityData["whitelistDuration"])
+
+        activityCollection.update_one({"_id": "envision"}, {"$push": {"whitelist": {"username": username, "unwhitelistDate": unwhitelistDate}}})
+        await ctx.channel.send(f"<:added:835599921113202688> **{username}** added to whitelist on **{datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}** (Unwhitelisted on **{unwhitelistDate.date().strftime('%m/%d/%Y')}**) **|** Added by {ctx.author}")
+
+        if ctx.channel != whitelistLogChannel:
+
+            await whitelistLogChannel.send(f"<:added:835599921113202688> **{username}** added to whitelist on **{datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}** (Unwhitelisted on **{unwhitelistDate.date().strftime('%m/%d/%Y')}**) **|** Added by {ctx.author}")
 
     @whitelist.command(aliases = ["rem", "rm", "r"])
     async def remove(self, ctx, username: typing.Optional[str]):
 
         await ctx.message.delete()
+
+        whitelistLogChannel = self.bot.get_channel(int(os.getenv("WHITELIST_LOG_CHANNEL_ID")))
 
         activityData = await activityCollection.find_one({"_id": "envision"})
         whitelistedMembers = [member["username"] for member in activityData["whitelist"]]
@@ -300,7 +310,11 @@ class activity(commands.Cog, name = "Activity"):
             return
 
         activityCollection.update_one({"_id": "envision"}, {"$pull": {"whitelist": {"username": username}}})
-        await ctx.channel.send(f"Unwhitelisted member {username}. Unwhitelisted by {ctx.author.name}")
+        await ctx.channel.send(f"<:removed:835599920860758037> **{username}** removed from whitelist **|** removed by {ctx.author}")
+
+        if ctx.channel != whitelistLogChannel:
+
+            await whitelistLogChannel.send(f"<:removed:835599920860758037> **{username}** removed from whitelist **|** removed by {ctx.author}")
 
     @whitelist.command(aliases = ["ext", "e"])
     async def extend(self, ctx, username: typing.Optional[str], duration: typing.Optional[int]):
@@ -352,14 +366,14 @@ class activity(commands.Cog, name = "Activity"):
                 await ctx.channel.send(f"Extension duration must be an integer.", delete_after = 15)
                 return
 
-        currentUnwhitelistDate = next(member["unwhitelistDate"] for member in whitelist if member["username"] == username)
+        unwhitelistDate = next(member["unwhitelistDate"] for member in whitelist if member["username"] == username) + datetime.timedelta(days = duration)
 
-        await activityCollection.update_one({"_id": "envision", "whitelist.username": username}, {"$set": {"whitelist.$.unwhitelistDate": currentUnwhitelistDate + datetime.timedelta(days = duration)}})
-        await ctx.channel.send(f"Member {username}'s whitelist time extended by {duration} days. Unwhitelisted on {(currentUnwhitelistDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+        await activityCollection.update_one({"_id": "envision", "whitelist.username": username}, {"$set": {"whitelist.$.unwhitelistDate": unwhitelistDate}})
+        await ctx.channel.send(f"<:extend:835734028497321984> **{username}** whitelist period extended by **{duration}** days **|** Unwhitelisted on **{unwhitelistDate.strftime('%m/%d/%Y')}** (mm/dd/yy) **|** Extended by by {ctx.author}")
 
         if ctx.channel != whitelistLogChannel:
 
-            await whitelistLogChannel.send(f"Member {username}'s whitelist time extended by {duration} days. Unwhitelisted on {(currentUnwhitelistDate + datetime.timedelta(days = duration)).strftime('%m/%d/%Y')} (mm/dd/yyyy). Extended by {ctx.author}")
+            await whitelistLogChannel.send(f"<:extend:835734028497321984> **{username}** whitelist period extended by **{duration}** days **|** Unwhitelisted on **{unwhitelistDate.strftime('%m/%d/%Y')}** (mm/dd/yy) **|** Extended by by {ctx.author}")
 
     @whitelist.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
