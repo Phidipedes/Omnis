@@ -40,8 +40,6 @@ class members(commands.Cog, name = "Member Updates"):
         trialMembersList = [trial["username"] for trial in trialData["trialMembers"]]
         whitelistedMembersList = [wlmember["username"] for wlmember in activityData["whitelist"]]
 
-        print(hypixelData)
-
         for member in hypixelData["guild"]["members"]:
 
             try:
