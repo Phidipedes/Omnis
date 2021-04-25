@@ -18,7 +18,7 @@ class members(commands.Cog, name = "Member Updates"):
         self.bot = bot
         self.updateMembers.start() #pylint: disable=no-member
 
-    @tasks.loop(minutes = 3)
+    @tasks.loop(minutes = 1)
     async def updateMembers(self):
 
         memberLogChannel = self.bot.get_channel(int(os.getenv("MEMBER_LOG_CHANNEL_ID")))
@@ -30,18 +30,17 @@ class members(commands.Cog, name = "Member Updates"):
 
         except:
 
-            me = self.bot.get_user(693132768510607400)
-
-            await me.send(f"Check log. Something went wrong")
-
-            print(f"Somethign went wrong with the following data:\nHypixelData:")
-            pprint.pprint(hypixelData)
+            print(f"Hypixel request failed. This is likely due to server lag causing bad gateway error. ")
+            
+            pass
 
         cachedData = await memberCollection.find_one({"_id": "envision"})
         trialData = await trialsCollection.find_one({"_id": "envision"})
         activityData = await activityCollection.find_one({"_id": "envision"})
         trialMembersList = [trial["username"] for trial in trialData["trialMembers"]]
         whitelistedMembersList = [wlmember["username"] for wlmember in activityData["whitelist"]]
+
+        print(hypixelData)
 
         for member in hypixelData["guild"]["members"]:
 
