@@ -6,6 +6,7 @@ import json
 import requests
 import datetime
 import os
+import pprint
 
 from database import memberCollection, trialsCollection, activityCollection #pylint: disable = import-error
 from timezones import eastern #pylint: disable = import-error
@@ -23,7 +24,19 @@ class members(commands.Cog, name = "Member Updates"):
         memberLogChannel = self.bot.get_channel(int(os.getenv("MEMBER_LOG_CHANNEL_ID")))
         trialDateChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
-        hypixelData = requests.get(f"https://api.hypixel.net/guild?key={os.getenv('HYPIXEL_API_KEY')}&name=envision").json()
+        try:
+            
+            hypixelData = requests.get(f"https://api.hypixel.net/guild?key={os.getenv('HYPIXEL_API_KEY')}&name=envision").json()
+
+        except:
+
+            me = self.bot.get_user(693132768510607400)
+
+            await me.send(f"Check log. Something went wrong")
+
+            print(f"Somethign went wrong with the following data:\nHypixelData:")
+            pprint.pprint(hypixelData)
+
         cachedData = await memberCollection.find_one({"_id": "envision"})
         trialData = await trialsCollection.find_one({"_id": "envision"})
         activityData = await activityCollection.find_one({"_id": "envision"})
@@ -80,7 +93,7 @@ class members(commands.Cog, name = "Member Updates"):
 
                 me = self.bot.get_user(693132768510607400)
 
-                await me.send(f"Check log. Somethign went wrong")
+                await me.send(f"Check log. Something went wrong")
 
                 print(f"Something went wrong with the following data:\nHypixel Data:\n{member}")
                 print(f"Mojang Data:\n{mojangData}")
