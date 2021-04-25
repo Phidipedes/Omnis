@@ -141,11 +141,11 @@ class trials(commands.Cog, name = "Trial Members"):
 
         await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialDuration": duration}})
 
-        await ctx.channel.send(f"Trial period duration set to {duration} days by {ctx.author}")
+        await ctx.channel.send(f"⏲️ Trial duration set to {duration} days by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(f"Trial period duration set to {duration} days by {ctx.author}")
+            await trialDateChannel.send(f"⏲️ Trial duration set to {duration} days by {ctx.author}")
 
     @trials.command(aliases = ["a"])
     async def add(self, ctx, username: typing.Optional[str]):
@@ -198,14 +198,13 @@ class trials(commands.Cog, name = "Trial Members"):
             await ctx.channel.send(f"This member is already in their trial period.", delete_after = 15)
             return
 
-        trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": (datetime.datetime.now().astimezone(eastern) + datetime.timedelta(trialDuration)).replace(hour = 0, minute = 0, second = 0, microsecond= 0)}}})
-        memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialData["trialDuration"])
-        newTrialEmbed = discord.Embed(title = f"{username} Starting Trial", description = f"Starting trial on {datetime.datetime.now().astimezone(eastern).date().strftime('%d/%m/%Y')} (dd/mm/yyyy).\nMember on {memberDate.date().strftime('%d/%m/%Y')}\nAdded by: {ctx.author}.", color = discord.Color.green(), timestamp = datetime.datetime.utcnow())
-        await ctx.channel.send(embed = newTrialEmbed)
+        memberDate = datetime.datetime.now().astimezone(eastern).replace(hour = 0, minute = 0, second = 0, microsecond = 0) + datetime.timedelta(days = trialDuration)
+        trialsCollection.update_one({"_id": "envision"}, {"$push": {"trialMembers": {"username": username, "memberDate": memberDate}}})
+        await ctx.channel.send(f"<:added:835599921113202688> **{username}** added to trial members on **{datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}** (Member on **{memberDate.date().strftime('%m/%d/%Y')}**) **|** Added by {ctx.author}")
         
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(embed = newTrialEmbed)
+            await trialDateChannel.send(f"<:added:835599921113202688> **{username}** added to trial members on **{datetime.datetime.now().astimezone(eastern).date().strftime('%m/%d/%Y')}** (Member on **{memberDate.date().strftime('%m/%d/%Y')}**) **|** Added by {ctx.author}")
 
     @trials.command(aliases = ["rem", "r"])
     async def remove(self, ctx, username: typing.Optional[str]):
@@ -252,12 +251,11 @@ class trials(commands.Cog, name = "Trial Members"):
             return
 
         await trialsCollection.update_one({"_id": "envision"}, {"$pull": {"trialMembers": {"username": username}}})
-        removeTrialEmbed = discord.Embed(title = f"{username} Removed from Trial", description = f"Removed by {ctx.author}", color = discord.Color.dark_red())
-        await ctx.channel.send(embed = removeTrialEmbed)
+        await ctx.channel.send(f"<:removed:835599920860758037> **{username}** removed from trial members **|** removed by {ctx.author}")
 
         if ctx.channel != trialDateChannel:
 
-            await trialDateChannel.send(embed = removeTrialEmbed)
+            await trialDateChannel.send(f"<:removed:835599920860758037> **{username}** removed from trial members **|** removed by {ctx.author}")
 
     @trials.command(aliases = ["ext", "e"])
     async def extend(self, ctx, username: typing.Optional[str], duration: typing.Optional[int]):
@@ -267,7 +265,7 @@ class trials(commands.Cog, name = "Trial Members"):
         trialData = await trialsCollection.find_one({"_id": "envision"})
         trialMembers = trialData["trialMembers"]
 
-        trialMemberLogChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_LOG_CHANNEL_ID")))
+        trialMemberLogChannel = self.bot.get_channel(int(os.getenv("TRIAL_MEMBER_DATE_CHANNEL_ID")))
 
         if username == None:
 
@@ -276,7 +274,7 @@ class trials(commands.Cog, name = "Trial Members"):
                 await ctx.channel.send(f"What member's trial period time do you want to extend?", delete_after = 15)
                 usernameResponse = await self.bot.wait_for("message", timeout = 300, check = messageCheck(ctx))
                 await usernameResponse.delete()
-                username = usernameResponse.content.casefold()
+                username = usernameResponse.content
 
             except asyncio.TimeoutError:
 
@@ -312,12 +310,11 @@ class trials(commands.Cog, name = "Trial Members"):
         memberDate = next(trial["memberDate"] for trial in trialMembers if trial["username"] == username) + datetime.timedelta(days = duration)
 
         await trialsCollection.update_one({"_id": "envision", "trialMembers.username": username}, {"$set": {"trialMembers.$.memberDate": memberDate}})
-        extendTrialEmbed = discord.Embed(title = f"{username} Trial Extended", description = f"Extended by {duration} days.\nMember on {memberDate}.\nExtended by {ctx.author}")
-        await ctx.channel.send(embed = extendTrialEmbed)
+        await ctx.channel.send(f"<:extend:835734028497321984> **{username}** trial period extended by **{duration}** days **|** Member on {memberDate.strftime('%m/%d/%Y')} (mm/dd/yy) **|** Extended by by {ctx.author}")
 
         if ctx.channel != trialMemberLogChannel:
 
-            await trialMemberLogChannel.send(embed = extendTrialEmbed)
+            await trialMemberLogChannel.send(f"<:extend:835734028497321984> **{username}** trial period extended by **{duration}** days **|** Member on **{memberDate.strftime('%m/%d/%Y')}** (mm/dd/yy) **|** Extended by by {ctx.author}")
 
     @trials.command(aliases = ["list", "li", "l"])
     async def _list(self, ctx):
