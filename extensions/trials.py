@@ -434,6 +434,7 @@ class trials(commands.Cog, name = "Trial Members"):
 
         passList = []
         failList = []
+        trialList = []
 
         trialData = await trialsCollection.find_one({"_id": "envision"})
         trialMembers = trialData["trialMembers"]
@@ -459,6 +460,8 @@ class trials(commands.Cog, name = "Trial Members"):
 
                     failList.append([trial["username"], trialData["trialReq"] - gexpEarned])
 
+                trialList.append(trial["username"])
+
         if len(passList) > 0:
 
             passingMessage = "\n".join([f"```+ {passing[0]} --- earned {passing[1]} gexp```\n" for passing in passList])
@@ -481,7 +484,7 @@ class trials(commands.Cog, name = "Trial Members"):
         await trialDateChannel.send(embed = passingEmbed)
         await trialDateChannel.send(embed = failingEmbed)
 
-        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": [trial for trial in trialMembers if trial["username"] not in (passList + failList)]}})
+        await trialsCollection.update_one({"_id": "envision"}, {"$set": {"trialMembers": [trial for trial in trialMembers if trial["username"] not in trialList]}})
 
     @checkTrialMembers.before_loop
     async def beforeCheckLoop(self):
